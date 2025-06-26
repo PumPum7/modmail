@@ -6,6 +6,7 @@ export interface Message {
 	author_tag: string;
 	content: string;
 	created_at: string;
+	thread_id: number;
 }
 
 export interface Thread {

@@ -1,36 +1,44 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
 	import { Clock, MessageCircle, User, XCircle } from 'lucide-svelte';
 	import type { Thread } from '$lib/api';
-	import { api } from '$lib/api';
+	import type { PageProps } from './$types';
 
-	let { data } = $props();
+	let { data }: PageProps = $props();
 
-	let threads: Thread[] = $state([]);
-	let loading = $state(true);
+	let loading = $state(false);
 	let error = $state('');
 
-	onMount(async () => {
-		if (!data.user) {
-			goto('/login');
-			return;
+	// Handle server errors
+	$effect.pre(() => {
+		if (data.error) {
+			error = data.error;
 		}
-		
-		if (!data.user.isModerator) {
-			goto('/login?error=not_moderator');
-			return;
-		}
-
-		await loadThreads();
 	});
 
-	async function loadThreads() {
+	// Handle authentication on mount (client-side only)
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			if (!data.user) {
+				goto('/login');
+				return;
+			}
+			
+			if (!data.user.isModerator) {
+				goto('/login?error=not_moderator');
+				return;
+			}
+		}
+	});
+
+	async function refreshThreads() {
 		try {
 			loading = true;
-			threads = await api.getAllThreads();
+			error = '';
+			await invalidateAll(); // Refresh server data
 		} catch (err) {
-			error = 'Failed to load threads';
+			error = 'Failed to refresh threads';
 			console.error(err);
 		} finally {
 			loading = false;
@@ -39,10 +47,23 @@
 
 	async function closeThread(thread: Thread) {
 		try {
-			await api.closeThread(thread.id);
-			await loadThreads(); // Reload threads
+			loading = true;
+			error = '';
+			
+			const response = await fetch(`/api/threads/${thread.id}/close`, {
+				method: 'POST'
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to close thread');
+			}
+
+			await invalidateAll(); // Refresh server data
 		} catch (err) {
+			error = 'Failed to close thread';
 			console.error('Failed to close thread:', err);
+		} finally {
+			loading = false;
 		}
 	}
 
@@ -58,14 +79,16 @@
 <div class="page">
 	<div class="page-header">
 		<h1>Modmail Threads</h1>
-		<button onclick={loadThreads} class="refresh-btn">Refresh</button>
+		<button onclick={refreshThreads} class="refresh-btn" disabled={loading}>
+			{loading ? 'Loading...' : 'Refresh'}
+		</button>
 	</div>
 
-	{#if loading}
-		<div class="loading">Loading threads...</div>
-	{:else if error}
+	{#if error}
 		<div class="error">{error}</div>
-	{:else if threads.length === 0}
+	{:else if loading && data.threads.length === 0}
+		<div class="loading">Loading threads...</div>
+	{:else if data.threads.length === 0}
 		<div class="empty-state">
 			<MessageCircle size={48} color="#ccc" />
 			<h3>No threads found</h3>
@@ -73,7 +96,7 @@
 		</div>
 	{:else}
 		<div class="threads-grid">
-			{#each threads as thread (thread.id)}
+			{#each data.threads as thread (thread.id)}
 				<div class="thread-card" class:closed={!thread.is_open}>
 					<div class="thread-header">
 						<div class="thread-info">
@@ -101,7 +124,7 @@
 							View Messages
 						</button>
 						{#if thread.is_open}
-							<button onclick={() => closeThread(thread)} class="close-btn">
+							<button onclick={() => closeThread(thread)} class="close-btn" disabled={loading}>
 								<XCircle size={16} />
 								Close
 							</button>

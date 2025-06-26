@@ -1,35 +1,20 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { api, type Macro } from '$lib/api';
+	import { invalidateAll } from '$app/navigation';
+	import type { Macro } from '$lib/api';
+	import type { PageProps } from './$types';
 
-	let macros: Macro[] = [];
-	let loading = false;
-	let error = '';
-	let success = '';
+	let { data }: PageProps = $props();
+
+	let loading = $state(false);
+	let error = $state('');
+	let success = $state('');
 
 	// Form state
-	let showCreateForm = false;
-	let editingMacro: Macro | null = null;
-	let newMacroName = '';
-	let newMacroContent = '';
-	let editMacroContent = '';
-
-	onMount(async () => {
-		await loadMacros();
-	});
-
-	async function loadMacros() {
-		try {
-			loading = true;
-			error = '';
-			macros = await api.getAllMacros();
-		} catch (err) {
-			error = 'Failed to load macros';
-			console.error('Error loading macros:', err);
-		} finally {
-			loading = false;
-		}
-	}
+	let showCreateForm = $state(false);
+	let editingMacro: Macro | null = $state(null);
+	let newMacroName = $state('');
+	let newMacroContent = $state('');
+	let editMacroContent = $state('');
 
 	async function createMacro() {
 		if (!newMacroName.trim() || !newMacroContent.trim()) {
@@ -40,15 +25,27 @@
 		try {
 			loading = true;
 			error = '';
-			await api.createMacro({
-				name: newMacroName.trim(),
-				content: newMacroContent.trim()
+			
+			const response = await fetch('/api/macros', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					name: newMacroName.trim(),
+					content: newMacroContent.trim()
+				})
 			});
+
+			if (!response.ok) {
+				throw new Error('Failed to create macro');
+			}
+
 			success = 'Macro created successfully!';
 			newMacroName = '';
 			newMacroContent = '';
 			showCreateForm = false;
-			await loadMacros();
+			await invalidateAll(); // Refresh server data
 		} catch (err) {
 			error = 'Failed to create macro';
 			console.error('Error creating macro:', err);
@@ -66,11 +63,26 @@
 		try {
 			loading = true;
 			error = '';
-			await api.updateMacro(editingMacro.name, editMacroContent.trim());
+			
+			const response = await fetch(`/api/macros/${encodeURIComponent(editingMacro.name)}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					name: editingMacro.name,
+					content: editMacroContent.trim()
+				})
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to update macro');
+			}
+
 			success = 'Macro updated successfully!';
 			editingMacro = null;
 			editMacroContent = '';
-			await loadMacros();
+			await invalidateAll(); // Refresh server data
 		} catch (err) {
 			error = 'Failed to update macro';
 			console.error('Error updating macro:', err);
@@ -87,10 +99,19 @@
 		try {
 			loading = true;
 			error = '';
-			const result = await api.deleteMacro(name);
-			if (result.success) {
+			
+			const response = await fetch(`/api/macros/${encodeURIComponent(name)}`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to delete macro');
+			}
+
+			const result = await response.json();
+			if (result.success || result.success !== false) { // Handle both success response formats
 				success = 'Macro deleted successfully!';
-				await loadMacros();
+				await invalidateAll(); // Refresh server data
 			} else {
 				error = result.message || 'Failed to delete macro';
 			}
@@ -138,24 +159,24 @@
 	{#if error}
 		<div class="alert alert-error">
 			{error}
-			<button class="alert-close" on:click={clearMessages}>×</button>
+			<button class="alert-close" onclick={clearMessages}>×</button>
 		</div>
 	{/if}
 
 	{#if success}
 		<div class="alert alert-success">
 			{success}
-			<button class="alert-close" on:click={clearMessages}>×</button>
+			<button class="alert-close" onclick={clearMessages}>×</button>
 		</div>
 	{/if}
 
 	<div class="actions">
 		{#if !showCreateForm && !editingMacro}
-			<button class="btn btn-primary" on:click={() => (showCreateForm = true)}>
+			<button class="btn btn-primary" onclick={() => (showCreateForm = true)}>
 				+ Create New Macro
 			</button>
 		{/if}
-		<button class="btn btn-secondary" on:click={loadMacros} disabled={loading}>
+		<button class="btn btn-secondary" onclick={() => invalidateAll()} disabled={loading}>
 			{loading ? 'Loading...' : 'Refresh'}
 		</button>
 	</div>
@@ -163,7 +184,7 @@
 	{#if showCreateForm}
 		<div class="form-card">
 			<h3>Create New Macro</h3>
-			<form on:submit|preventDefault={createMacro}>
+			<form onsubmit={createMacro}>
 				<div class="form-group">
 					<label for="macro-name">Name:</label>
 					<input
@@ -188,7 +209,7 @@
 					<button type="submit" class="btn btn-primary" disabled={loading}>
 						{loading ? 'Creating...' : 'Create Macro'}
 					</button>
-					<button type="button" class="btn btn-secondary" on:click={cancelCreate}>
+					<button type="button" class="btn btn-secondary" onclick={cancelCreate}>
 						Cancel
 					</button>
 				</div>
@@ -199,7 +220,7 @@
 	{#if editingMacro}
 		<div class="form-card">
 			<h3>Edit Macro: {editingMacro.name}</h3>
-			<form on:submit|preventDefault={updateMacro}>
+			<form onsubmit={updateMacro}>
 				<div class="form-group">
 					<label for="edit-macro-content">Content:</label>
 					<textarea
@@ -214,7 +235,7 @@
 					<button type="submit" class="btn btn-primary" disabled={loading}>
 						{loading ? 'Updating...' : 'Update Macro'}
 					</button>
-					<button type="button" class="btn btn-secondary" on:click={cancelEditing}>
+					<button type="button" class="btn btn-secondary" onclick={cancelEditing}>
 						Cancel
 					</button>
 				</div>
@@ -222,30 +243,30 @@
 		</div>
 	{/if}
 
-	{#if loading && macros.length === 0}
+	{#if loading && data.macros.length === 0}
 		<div class="loading">Loading macros...</div>
-	{:else if macros.length === 0}
+	{:else if data.macros.length === 0}
 		<div class="empty-state">
 			<h3>No macros found</h3>
 			<p>Create your first macro to get started!</p>
 		</div>
 	{:else}
 		<div class="macros-grid">
-			{#each macros as macro (macro.id)}
+			{#each data.macros as macro (macro.id)}
 				<div class="macro-card">
 					<div class="macro-header">
 						<h4>{macro.name}</h4>
 						<div class="macro-actions">
 							<button
 								class="btn btn-small btn-secondary"
-								on:click={() => startEditing(macro)}
+								onclick={() => startEditing(macro)}
 								disabled={loading}
 							>
 								Edit
 							</button>
 							<button
 								class="btn btn-small btn-danger"
-								on:click={() => deleteMacro(macro.name)}
+								onclick={() => deleteMacro(macro.name)}
 								disabled={loading}
 							>
 								Delete

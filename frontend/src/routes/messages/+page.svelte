@@ -1,39 +1,49 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
 	import { Search, MessageSquare, Clock, User } from 'lucide-svelte';
 	import type { Message } from '$lib/api';
-	import { api } from '$lib/api';
+	import type { PageProps } from './$types';
 
-	let { data } = $props();
+	let { data }: PageProps = $props();
 
-	let messages: Message[] = $state([]);
 	let filteredMessages: Message[] = $state([]);
-	let loading = $state(true);
+	let loading = $state(false);
 	let error = $state('');
 	let searchTerm = $state('');
 
-	onMount(async () => {
-		if (!data.user) {
-			goto('/login');
-			return;
+	// Initialize filtered messages with server data
+	$effect.pre(() => {
+		if (data.messages) {
+			filteredMessages = [...data.messages];
 		}
-		
-		if (!data.user.isModerator) {
-			goto('/login?error=not_moderator');
-			return;
+		if (data.error) {
+			error = data.error;
 		}
-
-		await loadMessages();
 	});
 
-	async function loadMessages() {
+	// Handle authentication on mount (client-side only)
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			if (!data.user) {
+				goto('/login');
+				return;
+			}
+			
+			if (!data.user.isModerator) {
+				goto('/login?error=not_moderator');
+				return;
+			}
+		}
+	});
+
+	async function refreshMessages() {
 		try {
 			loading = true;
-			messages = await api.getAllMessages();
-			filteredMessages = [...messages];
+			error = '';
+			await invalidateAll(); // Refresh server data
 		} catch (err) {
-			error = 'Failed to load messages';
+			error = 'Failed to refresh messages';
 			console.error(err);
 		} finally {
 			loading = false;
@@ -41,13 +51,15 @@
 	}
 
 	function filterMessages() {
+		if (!data.messages) return;
+		
 		if (!searchTerm.trim()) {
-			filteredMessages = [...messages];
+			filteredMessages = [...data.messages];
 			return;
 		}
 
 		const term = searchTerm.toLowerCase();
-		filteredMessages = messages.filter(message =>
+		filteredMessages = data.messages.filter((message: Message) =>
 			message.content.toLowerCase().includes(term) ||
 			message.author_tag.toLowerCase().includes(term) ||
 			message.author_id.includes(term)
@@ -78,7 +90,9 @@
 <div class="page">
 	<div class="page-header">
 		<h1>All Messages</h1>
-		<button onclick={loadMessages} class="refresh-btn">Refresh</button>
+		<button onclick={refreshMessages} class="refresh-btn" disabled={loading}>
+			{loading ? 'Loading...' : 'Refresh'}
+		</button>
 	</div>
 
 	<div class="search-bar">
@@ -91,10 +105,10 @@
 		/>
 	</div>
 
-	{#if loading}
-		<div class="loading">Loading messages...</div>
-	{:else if error}
+	{#if error}
 		<div class="error">{error}</div>
+	{:else if loading && data.messages.length === 0}
+		<div class="loading">Loading messages...</div>
 	{:else if filteredMessages.length === 0}
 		<div class="empty-state">
 			<MessageSquare size={48} color="#ccc" />
@@ -107,7 +121,7 @@
 		<div class="messages-list">
 			<div class="list-header">
 				<div class="count-info">
-					Showing {filteredMessages.length} of {messages.length} messages
+					Showing {filteredMessages.length} of {data.messages.length} messages
 				</div>
 			</div>
 
