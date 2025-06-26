@@ -14,4 +14,4 @@ export const GET: RequestHandler = async ({ params, fetch }) => {
 		console.error('Error fetching thread:', error);
 		return json({ error: 'Failed to fetch thread' }, { status: 500 });
 	}
-}; 
+};

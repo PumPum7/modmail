@@ -7,15 +7,15 @@ export const POST: RequestHandler = async ({ params, fetch }) => {
 		const response = await fetch(`${PUBLIC_BACKEND_URL}/threads/${params.id}/close`, {
 			method: 'POST'
 		});
-		
+
 		if (!response.ok) {
 			throw new Error('Failed to close thread');
 		}
-		
+
 		const thread = await response.json();
 		return json(thread);
 	} catch (error) {
 		console.error('Error closing thread:', error);
 		return json({ error: 'Failed to close thread' }, { status: 500 });
 	}
-}; 
+};

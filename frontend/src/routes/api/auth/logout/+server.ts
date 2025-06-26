@@ -17,4 +17,4 @@ export const POST: RequestHandler = async () => {
 			'Set-Cookie': cookie
 		}
 	});
-}; 
+};

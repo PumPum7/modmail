@@ -1,4 +1,9 @@
-import { PUBLIC_DISCORD_CLIENT_ID, PUBLIC_DISCORD_REDIRECT_URI, PUBLIC_MOD_ROLE_IDS, PUBLIC_DISCORD_SERVER_ID } from '$env/static/public';
+import {
+	PUBLIC_DISCORD_CLIENT_ID,
+	PUBLIC_DISCORD_REDIRECT_URI,
+	PUBLIC_MOD_ROLE_IDS,
+	PUBLIC_DISCORD_SERVER_ID
+} from '$env/static/public';
 import { DISCORD_CLIENT_SECRET } from '$env/static/private';
 
 export interface DiscordUser {
@@ -22,7 +27,7 @@ export function getDiscordAuthUrl(): string {
 		response_type: 'code',
 		scope: 'identify email guilds.members.read'
 	});
-	
+
 	return `https://discord.com/oauth2/authorize?${params.toString()}`;
 }
 
@@ -66,13 +71,19 @@ export async function getDiscordUser(accessToken: string): Promise<DiscordUser> 
 	return response.json();
 }
 
-export async function getGuildMember(accessToken: string, _userId: string): Promise<DiscordGuildMember | null> {
+export async function getGuildMember(
+	accessToken: string,
+	_userId: string
+): Promise<DiscordGuildMember | null> {
 	try {
-		const response = await fetch(`https://discord.com/api/users/@me/guilds/${PUBLIC_DISCORD_SERVER_ID}/member`, {
-			headers: {
-				Authorization: `Bearer ${accessToken}`
+		const response = await fetch(
+			`https://discord.com/api/users/@me/guilds/${PUBLIC_DISCORD_SERVER_ID}/member`,
+			{
+				headers: {
+					Authorization: `Bearer ${accessToken}`
+				}
 			}
-		});
+		);
 
 		if (!response.ok) {
 			return null;
@@ -85,8 +96,8 @@ export async function getGuildMember(accessToken: string, _userId: string): Prom
 }
 
 export function isModerator(roles: string[]): boolean {
-	const modRoleIds = PUBLIC_MOD_ROLE_IDS.split(',').map(id => id.trim());
-	return roles.some(role => modRoleIds.includes(role));
+	const modRoleIds = PUBLIC_MOD_ROLE_IDS.split(',').map((id) => id.trim());
+	return roles.some((role) => modRoleIds.includes(role));
 }
 
 export function createJWT(payload: Record<string, any>): string {
@@ -106,4 +117,4 @@ export function parseJWT(token: string): any {
 	} catch {
 		return null;
 	}
-} 
+}

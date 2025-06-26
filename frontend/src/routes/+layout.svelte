@@ -19,7 +19,7 @@
 			<div class="sidebar-header">
 				<h1>Modmail Dashboard</h1>
 			</div>
-			
+
 			<div class="nav-links">
 				<a href="/" class:active={page.url.pathname === '/'}>
 					<MessageSquare size={20} />
@@ -37,11 +37,10 @@
 
 			<div class="sidebar-footer">
 				<div class="user-info">
-					<img 
-						src={data.user.avatar 
+					<img
+						src={data.user.avatar
 							? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`
-							: `https://cdn.discordapp.com/embed/avatars/${parseInt(data.user.discriminator) % 5}.png`
-						}
+							: `https://cdn.discordapp.com/embed/avatars/${parseInt(data.user.discriminator) % 5}.png`}
 						alt={data.user.username}
 						class="avatar"
 					/>
@@ -70,7 +69,8 @@
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+		font-family:
+			-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 		background-color: #f5f5f5;
 	}
 
@@ -179,9 +179,9 @@
 		.sidebar {
 			width: 200px;
 		}
-		
+
 		.content {
 			padding: 1rem;
 		}
 	}
-</style> 
+</style>

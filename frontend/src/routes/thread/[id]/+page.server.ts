@@ -9,11 +9,11 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			if (response.status === 404) {
 				return {
 					error: 'Thread not found'
-				}
+				};
 			}
 			return {
 				error: 'Failed to fetch thread'
-			}
+			};
 		}
 		const [thread, messages]: [Thread, Message[]] = await response.json();
 		return {
@@ -25,10 +25,10 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		if (err instanceof Error && err.message.includes('404')) {
 			return {
 				error: 'Thread not found'
-			}
+			};
 		}
 		return {
 			error: 'Failed to load thread'
-		}
+		};
 	}
-}; 
+};

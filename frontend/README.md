@@ -92,23 +92,27 @@ bun run preview
 ### Dashboard Features
 
 #### Threads Page (`/`)
+
 - View all modmail threads with their status
 - See user information and thread details
 - Close open threads directly from the list
 - Click "View Messages" to see the full conversation
 
 #### Thread Details (`/thread/{id}`)
+
 - View complete message history
 - See timestamps and author information
 - Send new messages to the user
 - Close the thread
 
 #### Messages Page (`/messages`)
+
 - View all messages across all threads
 - Filter and search functionality
 - Export message history
 
 #### Macros Page (`/macros`)
+
 - Create new response macros
 - Edit existing macros
 - Delete unused macros
@@ -177,6 +181,7 @@ web/
 ### Debug Mode
 
 Add to your `.env` file:
+
 ```env
 NODE_ENV=development
 ```

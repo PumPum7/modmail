@@ -27,7 +27,7 @@
 				goto('/login');
 				return;
 			}
-			
+
 			if (!data.user.isModerator) {
 				goto('/login?error=not_moderator');
 				return;
@@ -44,7 +44,7 @@
 		try {
 			loading = true;
 			error = '';
-			
+
 			const response = await fetch(`/api/threads/${data.thread.id}/messages`, {
 				method: 'POST',
 				headers: {
@@ -77,7 +77,7 @@
 		try {
 			loading = true;
 			error = '';
-			
+
 			const response = await fetch(`/api/threads/${data.thread.id}/close`, {
 				method: 'POST'
 			});
@@ -128,7 +128,11 @@
 						<MessageCircle size={14} />
 						<span>Channel: {data.thread.thread_id.slice(0, 8)}...</span>
 					</div>
-					<div class="thread-status" class:open={data.thread.is_open} class:closed={!data.thread.is_open}>
+					<div
+						class="thread-status"
+						class:open={data.thread.is_open}
+						class:closed={!data.thread.is_open}
+					>
 						{data.thread.is_open ? 'Open' : 'Closed'}
 					</div>
 				</div>
@@ -200,7 +204,7 @@
 		{#if data.thread.is_open}
 			<div class="add-message-section">
 				<div class="section-header">
-					<h2>Add Message</h2>
+					<h2>Add Note</h2>
 				</div>
 				<form onsubmit={addMessage} class="message-form">
 					<div class="form-row">
@@ -220,7 +224,7 @@
 						<textarea
 							id="content"
 							bind:value={newMessageContent}
-							placeholder="Enter message content..."
+							placeholder="Enter note content..."
 							rows="3"
 							required
 						></textarea>
@@ -228,7 +232,7 @@
 					<div class="form-actions">
 						<button type="submit" class="send-btn" disabled={loading}>
 							<Send size={16} />
-							{loading ? 'Sending...' : 'Send Message'}
+							{loading ? 'Sending...' : 'Send Note'}
 						</button>
 					</div>
 				</form>
@@ -581,4 +585,4 @@
 			gap: 0.5rem;
 		}
 	}
-</style> 
+</style>

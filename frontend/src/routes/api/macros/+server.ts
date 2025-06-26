@@ -26,15 +26,15 @@ export const POST: RequestHandler = async ({ request, fetch }) => {
 			},
 			body: JSON.stringify(body)
 		});
-		
+
 		if (!response.ok) {
 			throw new Error('Failed to create macro');
 		}
-		
+
 		const macro = await response.json();
 		return json(macro);
 	} catch (error) {
 		console.error('Error creating macro:', error);
 		return json({ error: 'Failed to create macro' }, { status: 500 });
 	}
-}; 
+};

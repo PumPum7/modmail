@@ -25,7 +25,7 @@
 		try {
 			loading = true;
 			error = '';
-			
+
 			const response = await fetch('/api/macros', {
 				method: 'POST',
 				headers: {
@@ -63,7 +63,7 @@
 		try {
 			loading = true;
 			error = '';
-			
+
 			const response = await fetch(`/api/macros/${encodeURIComponent(editingMacro.name)}`, {
 				method: 'PUT',
 				headers: {
@@ -99,7 +99,7 @@
 		try {
 			loading = true;
 			error = '';
-			
+
 			const response = await fetch(`/api/macros/${encodeURIComponent(name)}`, {
 				method: 'DELETE'
 			});
@@ -109,7 +109,8 @@
 			}
 
 			const result = await response.json();
-			if (result.success || result.success !== false) { // Handle both success response formats
+			if (result.success || result.success !== false) {
+				// Handle both success response formats
 				success = 'Macro deleted successfully!';
 				await invalidateAll(); // Refresh server data
 			} else {
@@ -209,9 +210,7 @@
 					<button type="submit" class="btn btn-primary" disabled={loading}>
 						{loading ? 'Creating...' : 'Create Macro'}
 					</button>
-					<button type="button" class="btn btn-secondary" onclick={cancelCreate}>
-						Cancel
-					</button>
+					<button type="button" class="btn btn-secondary" onclick={cancelCreate}> Cancel </button>
 				</div>
 			</form>
 		</div>
@@ -235,9 +234,7 @@
 					<button type="submit" class="btn btn-primary" disabled={loading}>
 						{loading ? 'Updating...' : 'Update Macro'}
 					</button>
-					<button type="button" class="btn btn-secondary" onclick={cancelEditing}>
-						Cancel
-					</button>
+					<button type="button" class="btn btn-secondary" onclick={cancelEditing}> Cancel </button>
 				</div>
 			</form>
 		</div>
@@ -467,7 +464,9 @@
 		border-radius: 0.5rem;
 		padding: 1.5rem;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-		transition: transform 0.2s, box-shadow 0.2s;
+		transition:
+			transform 0.2s,
+			box-shadow 0.2s;
 	}
 
 	.macro-card:hover {
@@ -533,4 +532,4 @@
 			flex: 1;
 		}
 	}
-</style> 
+</style>

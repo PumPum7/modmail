@@ -18,4 +18,4 @@ export const load: PageServerLoad = async ({ fetch }) => {
 			error: 'Failed to load threads'
 		};
 	}
-}; 
+};

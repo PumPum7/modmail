@@ -1,5 +1,11 @@
 import { redirect } from '@sveltejs/kit';
-import { exchangeCodeForTokens, getDiscordUser, getGuildMember, isModerator, createJWT } from '$lib/auth';
+import {
+	exchangeCodeForTokens,
+	getDiscordUser,
+	getGuildMember,
+	isModerator,
+	createJWT
+} from '$lib/auth';
 import type { RequestHandler } from './$types';
 import { serialize } from 'cookie';
 
@@ -14,20 +20,20 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	try {
 		// Exchange code for tokens
 		const tokens = await exchangeCodeForTokens(code);
-		
+
 		// Get user info
 		const discordUser = await getDiscordUser(tokens.access_token);
-		
+
 		// Get guild member info to check roles
 		const guildMember = await getGuildMember(tokens.access_token, discordUser.id);
-		
+
 		if (!guildMember) {
 			throw redirect(302, '/login?error=not_member');
 		}
 
 		// Check if user is a moderator
 		const userIsModerator = isModerator(guildMember.roles);
-		
+
 		if (!userIsModerator) {
 			throw redirect(302, '/login?error=not_moderator');
 		}
@@ -63,9 +69,8 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		});
 
 		return response;
-
 	} catch (error) {
 		console.error('Auth callback error:', error);
 		throw redirect(302, '/login?error=auth_failed');
 	}
-}; 
+};

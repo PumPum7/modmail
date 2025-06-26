@@ -30,7 +30,7 @@
 				goto('/login');
 				return;
 			}
-			
+
 			if (!data.user.isModerator) {
 				goto('/login?error=not_moderator');
 				return;
@@ -53,17 +53,18 @@
 
 	function filterMessages() {
 		if (!data.messages) return;
-		
+
 		if (!searchTerm.trim()) {
 			filteredMessages = [...data.messages];
 			return;
 		}
 
 		const term = searchTerm.toLowerCase();
-		filteredMessages = data.messages.filter((message: Message) =>
-			message.content.toLowerCase().includes(term) ||
-			message.author_tag.toLowerCase().includes(term) ||
-			message.author_id.includes(term)
+		filteredMessages = data.messages.filter(
+			(message: Message) =>
+				message.content.toLowerCase().includes(term) ||
+				message.author_tag.toLowerCase().includes(term) ||
+				message.author_id.includes(term)
 		);
 	}
 
@@ -105,7 +106,9 @@
 			<MessageSquare size={48} color="#ccc" />
 			<h3>No messages found</h3>
 			<p>
-				{searchTerm ? 'Try adjusting your search terms.' : 'Messages will appear here as users interact with the bot.'}
+				{searchTerm
+					? 'Try adjusting your search terms.'
+					: 'Messages will appear here as users interact with the bot.'}
 			</p>
 		</div>
 	{:else}
@@ -333,4 +336,4 @@
 			padding: 0.5rem 0.75rem;
 		}
 	}
-</style> 
+</style>

@@ -24,7 +24,7 @@
 				goto('/login');
 				return;
 			}
-			
+
 			if (!data.user.isModerator) {
 				goto('/login?error=not_moderator');
 				return;
@@ -49,7 +49,7 @@
 		try {
 			loading = true;
 			error = '';
-			
+
 			const response = await fetch(`/api/threads/${thread.id}/close`, {
 				method: 'POST'
 			});
@@ -324,11 +324,11 @@
 		.threads-grid {
 			grid-template-columns: 1fr;
 		}
-		
+
 		.page-header {
 			flex-direction: column;
 			gap: 1rem;
 			align-items: stretch;
 		}
 	}
-</style> 
+</style>

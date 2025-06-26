@@ -14,4 +14,4 @@ export const GET: RequestHandler = async ({ fetch }) => {
 		console.error('Error fetching messages:', error);
 		return json({ error: 'Failed to fetch messages' }, { status: 500 });
 	}
-}; 
+};

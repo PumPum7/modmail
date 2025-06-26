@@ -69,11 +69,14 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async addMessageToThread(threadId: number, message: {
-		author_id: string;
-		author_tag: string;
-		content: string;
-	}): Promise<Message> {
+	async addMessageToThread(
+		threadId: number,
+		message: {
+			author_id: string;
+			author_tag: string;
+			content: string;
+		}
+	): Promise<Message> {
 		const response = await fetch(`${this.baseUrl}/threads/${threadId}/messages`, {
 			method: 'POST',
 			headers: {
@@ -143,4 +146,4 @@ export class ApiClient {
 	}
 }
 
-export const api = new ApiClient(); 
+export const api = new ApiClient();
