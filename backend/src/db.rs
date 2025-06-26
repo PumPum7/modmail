@@ -1,5 +1,5 @@
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres, types::uuid::Uuid};
 use serde::{Deserialize, Serialize};
+use sqlx::{postgres::PgPoolOptions, types::uuid::Uuid, Pool, Postgres};
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct Message {
