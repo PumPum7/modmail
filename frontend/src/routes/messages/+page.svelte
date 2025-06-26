@@ -4,6 +4,7 @@
 	import { Search, MessageSquare, Clock, User } from 'lucide-svelte';
 	import type { Message } from '$lib/api';
 	import type { PageProps } from './$types';
+	import { formatDate, truncateContent } from '$lib/util';
 
 	let { data }: PageProps = $props();
 
@@ -64,16 +65,6 @@
 			message.author_tag.toLowerCase().includes(term) ||
 			message.author_id.includes(term)
 		);
-	}
-
-	function formatDate(dateString: string) {
-		const date = new Date(dateString);
-		return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-	}
-
-	function truncateContent(content: string, maxLength: number = 200) {
-		if (content.length <= maxLength) return content;
-		return content.substring(0, maxLength) + '...';
 	}
 
 	$effect.pre(() => {

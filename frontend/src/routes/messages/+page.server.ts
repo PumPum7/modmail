@@ -1,5 +1,6 @@
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
+import type { Message } from '$lib/api';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	try {
@@ -7,7 +8,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		if (!response.ok) {
 			throw new Error('Failed to fetch messages');
 		}
-		const messages = await response.json();
+		const messages: Message[] = await response.json();
 		return {
 			messages
 		};

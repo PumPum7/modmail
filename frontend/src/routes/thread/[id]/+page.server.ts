@@ -1,5 +1,6 @@
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
+import type { Message, Thread } from '$lib/api';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	try {
@@ -14,7 +15,7 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 				error: 'Failed to fetch thread'
 			}
 		}
-		const [thread, messages] = await response.json();
+		const [thread, messages]: [Thread, Message[]] = await response.json();
 		return {
 			thread,
 			messages

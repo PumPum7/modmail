@@ -5,7 +5,7 @@ export interface Message {
 	author_id: string;
 	author_tag: string;
 	content: string;
-	created_at: string;
+	created_at: number;
 	thread_id: number;
 }
 

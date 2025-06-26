@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { Clock, MessageCircle, User, Send, ArrowLeft, XCircle } from 'lucide-svelte';
 	import type { PageProps } from './$types';
+	import { formatDate, truncateContent } from '$lib/util';
 
 	let { data }: PageProps = $props();
 
@@ -93,11 +94,6 @@
 		} finally {
 			loading = false;
 		}
-	}
-
-	function formatDate(dateString: string) {
-		const date = new Date(dateString);
-		return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 	}
 
 	function formatUserId(userId: string) {
