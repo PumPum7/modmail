@@ -25,11 +25,6 @@ struct CreateMacro {
     content: String,
 }
 
-#[derive(Deserialize)]
-struct UpdateThread {
-    is_open: bool,
-}
-
 #[get("/messages")]
 async fn get_messages(pool: web::Data<sqlx::PgPool>) -> impl Responder {
     let messages = sqlx::query_as::<_, db::Message>("SELECT * FROM messages")
