@@ -216,18 +216,18 @@ async fn update_macro(pool: web::Data<sqlx::PgPool>, name: web::Path<String>, ma
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    println!("{}", database_url);
     let pool = db::connect(&database_url).await.unwrap();
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .supports_credentials()
+            .max_age(3600);
+
         App::new()
-            .wrap(
-                Cors::default()
-                    .allow_any_origin()
-                    .allow_any_method()
-                    .allow_any_header()
-                    .max_age(3600)
-            )
+            .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
             .service(get_messages)
             .service(create_message)
