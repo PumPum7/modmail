@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, ChatInputCommandInteraction, Message, ChannelType, EmbedBuilder, PermissionFlagsBits } from 'discord.js';
+import { Client, GatewayIntentBits, Events, ChatInputCommandInteraction, ChannelType, EmbedBuilder } from 'discord.js';
 import 'dotenv/config';
 
 // Types for API responses
@@ -25,9 +25,8 @@ interface Macro {
 
 // Environment variables
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!;
-const MODMAIL_CATEGORY_ID = process.env.MODMAIL_CATEGORY_ID!;
-const MOD_ROLE_IDS = process.env.MOD_ROLE_IDS?.split(',') || [];
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
+const MODMAIL_CATEGORY_ID = process.env.PUBLIC_DISCORD_MODMAIL_CHANNEL_ID!;
+const BACKEND_URL = process.env.PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 // Create Discord client
 const client = new Client({
@@ -38,16 +37,6 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
     ],
 });
-
-// Utility function to check if user is a moderator
-function isModerator(interaction: ChatInputCommandInteraction): boolean {
-    if (!interaction.member) return false;
-    const memberRoles = Array.isArray(interaction.member.roles) 
-        ? interaction.member.roles 
-        : interaction.member.roles.cache.map(role => role.id);
-    
-    return MOD_ROLE_IDS.some(roleId => memberRoles.includes(roleId));
-}
 
 // API helper functions
 async function createThread(userId: string, channelId: string): Promise<Thread> {
@@ -110,6 +99,21 @@ async function deleteMacro(name: string): Promise<{ success: boolean; message: s
     return response.json() as Promise<{ success: boolean; message: string }>;
 }
 
+async function getMacros(): Promise<Macro[]> {
+    const response = await fetch(`${BACKEND_URL}/macros`);
+    return response.json() as Promise<Macro[]>;
+}
+
+async function editMacro(name: string, content: string): Promise<Macro> {
+    const response = await fetch(`${BACKEND_URL}/macros/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+    });
+    return response.json() as Promise<Macro>;
+}
+
+
 client.once(Events.ClientReady, readyClient => {
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
@@ -117,15 +121,6 @@ client.once(Events.ClientReady, readyClient => {
 // Handle slash commands
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isChatInputCommand()) return;
-
-    // Check if user is a moderator for all commands
-    if (!isModerator(interaction)) {
-        await interaction.reply({
-            content: '❌ You do not have permission to use this command.',
-            ephemeral: true,
-        });
-        return;
-    }
 
     const { commandName } = interaction;
 
@@ -157,13 +152,11 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 async function handleMessageCommand(interaction: ChatInputCommandInteraction) {
-    const userId = interaction.options.getString('user', true);
+    const user = interaction.options.getUser('user', true);
     const messageContent = interaction.options.getString('message', true);
 
     try {
-        // Try to get the user
-        const user = await client.users.fetch(userId);
-        
+        // Try to get the user        
         // Send DM to user
         const embed = new EmbedBuilder()
             .setColor(0x0099FF)
@@ -174,7 +167,7 @@ async function handleMessageCommand(interaction: ChatInputCommandInteraction) {
         await user.send({ embeds: [embed] });
 
         // Find existing thread or create a new one
-        let thread = await getThreadByUserId(userId);
+        let thread = await getThreadByUserId(user.id);
         let channel;
 
         if (!thread) {
@@ -188,7 +181,7 @@ async function handleMessageCommand(interaction: ChatInputCommandInteraction) {
             });
 
             // Create thread in database
-            thread = await createThread(userId, channel.id);
+            thread = await createThread(user.id, channel.id);
         } else {
             channel = await client.channels.fetch(thread.thread_id);
         }
@@ -391,6 +384,39 @@ async function handleMacroCommand(interaction: ChatInputCommandInteraction) {
                     ephemeral: true,
                 });
             }
+            break;
+
+        case 'list':
+            const macros = await getMacros();
+            await interaction.reply({
+                content: `✅ Macros: ${macros.map(m => m.name).join(', ')}`,
+                ephemeral: true,
+            });
+            break;
+
+        case 'edit':
+            const editNameParam = interaction.options.getString('name', true);
+            const editContent = interaction.options.getString('content', true);
+
+            try {
+                await editMacro(editNameParam, editContent);
+                await interaction.reply({
+                    content: `✅ Macro "${editNameParam}" edited successfully.`,
+                    ephemeral: true,
+                });
+            } catch (error) {
+                await interaction.reply({
+                    content: `❌ Failed to edit macro.`,
+                    ephemeral: true,
+                });
+            }
+            break;
+
+        default:
+            await interaction.reply({
+                content: '❌ Invalid subcommand.',
+                ephemeral: true,
+            });
             break;
     }
 }

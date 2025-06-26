@@ -47,7 +47,6 @@
 					/>
 					<div class="user-details">
 						<div class="username">{data.user.username}</div>
-						<div class="discriminator">#{data.user.discriminator}</div>
 					</div>
 				</div>
 				<button on:click={logout} class="logout-btn">
@@ -149,11 +148,6 @@
 	.username {
 		font-weight: 600;
 		font-size: 0.9rem;
-	}
-
-	.discriminator {
-		font-size: 0.8rem;
-		color: #b9bbbe;
 	}
 
 	.logout-btn {

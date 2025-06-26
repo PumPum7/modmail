@@ -1,7 +1,7 @@
-use actix_web::{get, post, delete, web, App, HttpServer, Responder, Result};
+use actix_web::{get, post, delete, put, web, App, HttpServer, Responder, Result};
 use dotenv::dotenv;
 use std::env;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize};
 use uuid::Uuid;
 
 mod db;
@@ -204,6 +204,18 @@ async fn delete_macro(pool: web::Data<sqlx::PgPool>, name: web::Path<String>) ->
     }
 }
 
+#[put("/macros/{name}")]
+async fn update_macro(pool: web::Data<sqlx::PgPool>, name: web::Path<String>, macro_data: web::Json<CreateMacro>) -> Result<impl Responder> {
+    let updated_macro = sqlx::query_as::<_, db::Macro>("UPDATE macros SET content = $1 WHERE name = $2 RETURNING *")
+        .bind(&macro_data.content)
+        .bind(name.into_inner())
+        .fetch_one(pool.get_ref())
+        .await
+        .unwrap();
+
+    Ok(web::Json(updated_macro))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -225,6 +237,7 @@ async fn main() -> std::io::Result<()> {
             .service(create_macro)
             .service(get_macro_by_name)
             .service(delete_macro)
+            .service(update_macro)
     })
     .bind(("0.0.0.0", 8080))?
     .run()

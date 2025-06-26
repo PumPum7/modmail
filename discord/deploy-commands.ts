@@ -5,7 +5,7 @@ import 'dotenv/config';
 
 const commands = [
     new SlashCommandBuilder().setName('message').setDescription('Send a message to a user')
-        .addStringOption(option => option.setName('user').setDescription('The user to message (ID)').setRequired(true))
+        .addUserOption(option => option.setName('user').setDescription('The user to message').setRequired(true))
         .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true)),
     new SlashCommandBuilder().setName('close').setDescription('Close the current thread'),
     new SlashCommandBuilder().setName('macro').setDescription('Manage macros')
@@ -19,6 +19,12 @@ const commands = [
         .addSubcommand(subcommand =>
             subcommand.setName('delete').setDescription('Delete a macro')
                 .addStringOption(option => option.setName('name').setDescription('The name of the macro to delete').setRequired(true)))
+        .addSubcommand(subcommand =>
+            subcommand.setName('list').setDescription('List all macros'))
+        .addSubcommand(subcommand =>
+            subcommand.setName('edit').setDescription('Edit a macro')
+                .addStringOption(option => option.setName('name').setDescription('The name of the macro').setRequired(true))
+                .addStringOption(option => option.setName('content').setDescription('The new content of the macro').setRequired(true)))
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_BOT_TOKEN!);
@@ -28,8 +34,11 @@ const rest = new REST({ version: '9' }).setToken(process.env.DISCORD_BOT_TOKEN!)
         console.log('Started refreshing application (/) commands.');
 
         await rest.put(
-            Routes.applicationGuildCommands(process.env.PUBLIC_DISCORD_CLIENT_ID!, process.env.DISCORD_SERVER_ID!),
-            { body: commands },
+          Routes.applicationGuildCommands(
+            process.env.PUBLIC_DISCORD_CLIENT_ID!,
+            process.env.PUBLIC_DISCORD_SERVER_ID!
+          ),
+          { body: commands }
         );
 
         console.log('Successfully reloaded application (/) commands.');
