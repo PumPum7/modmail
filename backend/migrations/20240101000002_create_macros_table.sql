@@ -1,0 +1,5 @@
+CREATE TABLE macros (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    content TEXT NOT NULL
+);

@@ -1,0 +1,26 @@
+{
+  "name": "discord",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "deploy": "bun run deploy-commands.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@discordjs/builders": "^1.11.2",
+    "@discordjs/rest": "^2.5.1",
+    "@types/pg": "^8.15.4",
+    "@types/uuid": "^10.0.0",
+    "discord-api-types": "^0.38.13",
+    "discord.js": "^14.21.0",
+    "dotenv": "^16.5.0",
+    "pg": "^8.16.2",
+    "uuid": "^11.1.0"
+  }
+}

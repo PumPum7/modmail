@@ -1,0 +1,6 @@
+CREATE TABLE threads (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    thread_id VARCHAR(255) NOT NULL,
+    is_open BOOLEAN NOT NULL DEFAULT TRUE
+);
