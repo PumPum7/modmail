@@ -126,6 +126,20 @@ export class ApiClient {
 		}
 		return response.json();
 	}
+
+	async updateMacro(name: string, content: string): Promise<Macro> {
+		const response = await fetch(`${this.baseUrl}/macros/${encodeURIComponent(name)}`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ name, content })
+		});
+		if (!response.ok) {
+			throw new Error('Failed to update macro');
+		}
+		return response.json();
+	}
 }
 
 export const api = new ApiClient(); 
