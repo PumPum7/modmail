@@ -1,4 +1,5 @@
 use actix_web::{get, post, delete, put, web, App, HttpServer, Responder, Result};
+use actix_cors::Cors;
 use dotenv::dotenv;
 use std::env;
 use serde::{Deserialize};
@@ -220,6 +221,13 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allow_any_method()
+                    .allow_any_header()
+                    .max_age(3600)
+            )
             .app_data(web::Data::new(pool.clone()))
             .service(get_messages)
             .service(create_message)
