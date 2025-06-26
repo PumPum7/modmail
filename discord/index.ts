@@ -135,6 +135,9 @@ client.on(Events.InteractionCreate, async interaction => {
             case 'macro':
                 await handleMacroCommand(interaction);
                 break;
+            case 'delete':
+                await handleDeleteCommand(interaction);
+                break;
         }
     } catch (error) {
         console.error('Error handling command:', error);
@@ -418,6 +421,14 @@ async function handleMacroCommand(interaction: ChatInputCommandInteraction) {
                 ephemeral: true,
             });
             break;
+    }
+}
+
+async function handleDeleteCommand(interaction: ChatInputCommandInteraction) {
+    // delete the discord channel
+    const channel = await client.channels.fetch(interaction.channelId);
+    if (channel) {
+        await channel.delete();
     }
 }
 

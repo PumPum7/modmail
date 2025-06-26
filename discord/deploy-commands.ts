@@ -8,6 +8,7 @@ const commands = [
         .addUserOption(option => option.setName('user').setDescription('The user to message').setRequired(true))
         .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true)),
     new SlashCommandBuilder().setName('close').setDescription('Close the current thread'),
+    new SlashCommandBuilder().setName('delete').setDescription('Delete the current thread'),
     new SlashCommandBuilder().setName('macro').setDescription('Manage macros')
         .addSubcommand(subcommand =>
             subcommand.setName('create').setDescription('Create a new macro')
