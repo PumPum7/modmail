@@ -5,11 +5,11 @@
 	import type { Thread } from '$lib/api';
 	import { api } from '$lib/api';
 
-	export let data;
+	let { data } = $props();
 
-	let threads: Thread[] = [];
-	let loading = true;
-	let error = '';
+	let threads: Thread[] = $state([]);
+	let loading = $state(true);
+	let error = $state('');
 
 	onMount(async () => {
 		if (!data.user) {
@@ -58,7 +58,7 @@
 <div class="page">
 	<div class="page-header">
 		<h1>Modmail Threads</h1>
-		<button on:click={loadThreads} class="refresh-btn">Refresh</button>
+		<button onclick={loadThreads} class="refresh-btn">Refresh</button>
 	</div>
 
 	{#if loading}
@@ -97,11 +97,11 @@
 					</div>
 
 					<div class="thread-actions">
-						<button on:click={() => goto(`/thread/${thread.id}`)} class="view-btn">
+						<button onclick={() => goto(`/thread/${thread.id}`)} class="view-btn">
 							View Messages
 						</button>
 						{#if thread.is_open}
-							<button on:click={() => closeThread(thread)} class="close-btn">
+							<button onclick={() => closeThread(thread)} class="close-btn">
 								<XCircle size={16} />
 								Close
 							</button>

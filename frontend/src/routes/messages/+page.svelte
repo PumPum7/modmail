@@ -5,13 +5,13 @@
 	import type { Message } from '$lib/api';
 	import { api } from '$lib/api';
 
-	export let data;
+	let { data } = $props();
 
-	let messages: Message[] = [];
-	let filteredMessages: Message[] = [];
-	let loading = true;
-	let error = '';
-	let searchTerm = '';
+	let messages: Message[] = $state([]);
+	let filteredMessages: Message[] = $state([]);
+	let loading = $state(true);
+	let error = $state('');
+	let searchTerm = $state('');
 
 	onMount(async () => {
 		if (!data.user) {
@@ -64,9 +64,11 @@
 		return content.substring(0, maxLength) + '...';
 	}
 
-	$: if (searchTerm !== undefined) {
-		filterMessages();
-	}
+	$effect.pre(() => {
+		if (searchTerm !== undefined) {
+			filterMessages();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -76,7 +78,7 @@
 <div class="page">
 	<div class="page-header">
 		<h1>All Messages</h1>
-		<button on:click={loadMessages} class="refresh-btn">Refresh</button>
+		<button onclick={loadMessages} class="refresh-btn">Refresh</button>
 	</div>
 
 	<div class="search-bar">

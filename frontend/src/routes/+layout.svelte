@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { LogOut, MessageSquare, Settings, Users } from 'lucide-svelte';
 
-	export let data;
+	let { data, children } = $props();
 
 	async function logout() {
 		const response = await fetch('/auth/logout', { method: 'POST' });
@@ -21,15 +21,15 @@
 			</div>
 			
 			<div class="nav-links">
-				<a href="/" class:active={$page.url.pathname === '/'}>
+				<a href="/" class:active={page.url.pathname === '/'}>
 					<MessageSquare size={20} />
 					Threads
 				</a>
-				<a href="/messages" class:active={$page.url.pathname === '/messages'}>
+				<a href="/messages" class:active={page.url.pathname === '/messages'}>
 					<Users size={20} />
 					All Messages
 				</a>
-				<a href="/macros" class:active={$page.url.pathname === '/macros'}>
+				<a href="/macros" class:active={page.url.pathname === '/macros'}>
 					<Settings size={20} />
 					Macros
 				</a>
@@ -49,7 +49,7 @@
 						<div class="username">{data.user.username}</div>
 					</div>
 				</div>
-				<button on:click={logout} class="logout-btn">
+				<button onclick={logout} class="logout-btn">
 					<LogOut size={16} />
 					Logout
 				</button>
@@ -57,11 +57,11 @@
 		</nav>
 
 		<main class="content">
-			<slot />
+			{@render children?.()}
 		</main>
 	{:else}
 		<main class="content">
-			<slot />
+			{@render children?.()}
 		</main>
 	{/if}
 </div>
