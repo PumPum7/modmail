@@ -1,189 +1,78 @@
-# Modmail Frontend Dashboard
+# Frontend - Modmail Dashboard
 
-A web dashboard for moderators to manage Discord modmail threads with Discord OAuth authentication.
+A web-based dashboard for moderators to manage modmail threads, view message history, and configure macros.
 
-## Features
+## Technologies Used
 
-- **Discord OAuth Authentication**: Moderators log in with their Discord accounts
-- **Role-based Access**: Only users with predefined moderator roles can access the dashboard
-- **Thread Management**: View all modmail threads, see their status, and close them
-- **Message History**: View complete conversation history for each thread
-- **Macro Management**: Create, edit, and delete response macros
-- **Real-time Data**: Live updates of thread status and messages
-- **Responsive Design**: Works on desktop and mobile devices
+- **SvelteKit** - Full-stack web framework with SSR/SPA capabilities
+- **TypeScript** - Type-safe JavaScript development
+- **Vite** - Fast build tool and development server
+- **Tailwind CSS** - Utility-first CSS framework (implied from styling)
+- **Lucide Svelte** - Icon library for UI components
+- **Discord API Types** - TypeScript definitions for Discord API
+- **Cookie** - Cookie parsing utilities
 
-## Setup
+## Architecture
 
-### 1. Install Dependencies
+The dashboard provides a web interface for moderator workflow management:
 
-```bash
-cd web
-bun install
-```
+### Core Features
 
-### 2. Environment Configuration
+1. **Authentication** - Discord OAuth integration for moderator login
+2. **Thread Management** - View active and closed modmail conversations
+3. **Message History** - Browse complete conversation threads
+4. **Macro Management** - Create, edit, and delete response templates
+5. **Real-time Updates** - Live view of ongoing conversations
 
-Create a `.env` file in the `web/` directory:
+### Page Structure
 
-```env
-# Discord OAuth Configuration
-PUBLIC_DISCORD_CLIENT_ID=your_client_id_here
-DISCORD_CLIENT_SECRET=your_client_secret_here
-PUBLIC_DISCORD_REDIRECT_URI=http://localhost:3000/auth/callback
+- `/` - Dashboard home with thread overview
+- `/messages` - All messages across threads
+- `/thread/{id}` - Individual thread view with full message history
+- `/macros` - Macro management interface
+- `/login` - Discord OAuth authentication
 
-# Backend API
-PUBLIC_BACKEND_URL=http://localhost:8080
+### API Integration
 
-# Moderator Role IDs (comma-separated)
-PUBLIC_MOD_ROLE_IDS=role_id_1,role_id_2,role_id_3
+The frontend communicates with the **Backend API** through a centralized API client (`lib/api.ts`):
 
-# Server ID
-PUBLIC_DISCORD_SERVER_ID=your_server_id_here
-```
-
-### 3. Discord Application Setup
-
-1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
-2. Select your existing application (the same one used for the bot)
-3. In the "OAuth2" section, add redirect URI: `http://localhost:3000/auth/callback`
-4. Copy the client secret to `DISCORD_CLIENT_SECRET`
-5. Ensure the application has the `identify`, `email`, and `guilds.members.read` scopes
-
-### 4. Start the Development Server
-
-```bash
-bun run dev
-```
-
-The frontend will be available at `http://localhost:3000`
-
-## Production Deployment
-
-### 1. Build the Application
-
-```bash
-bun run build
-```
-
-### 2. Environment Variables
-
-Update your production environment variables:
-
-- Set `PUBLIC_DISCORD_REDIRECT_URI` to your production domain
-- Update `PUBLIC_BACKEND_URL` to your production backend URL
-- Ensure HTTPS is enabled for production
-
-### 3. Start Production Server
-
-```bash
-bun run preview
-```
-
-## Usage
+- Thread operations (list, view, close, add messages)
+- Message retrieval and management
+- Macro CRUD operations
+- Authentication state management
 
 ### Authentication Flow
 
-1. Visit the dashboard URL
-2. Click "Continue with Discord"
-3. Authorize the application with Discord
-4. If you have the required moderator role, you'll be redirected to the dashboard
-5. If not, you'll see an error message
+1. User visits dashboard → Redirected to Discord OAuth
+2. Discord callback → Exchange code for tokens
+3. Fetch user info → Verify moderator permissions
+4. Create JWT session → Store in HTTP-only cookie
+5. Subsequent requests → Validate JWT for API access
 
-### Dashboard Features
+### Server-Side Rendering
 
-#### Threads Page (`/`)
+- Uses SvelteKit's SSR capabilities for initial page loads
+- Server-side data fetching in `+page.server.ts` files
+- Client-side hydration for interactive features
+- Handles authentication state on both server and client
 
-- View all modmail threads with their status
-- See user information and thread details
-- Close open threads directly from the list
-- Click "View Messages" to see the full conversation
+## Setup
 
-#### Thread Details (`/thread/{id}`)
+1. Install Bun (or Node.js)
+2. Install dependencies: `bun install`
+3. Configure environment variables
+4. Start development server: `bun run dev`
+5. Build for production: `bun run build`
 
-- View complete message history
-- See timestamps and author information
-- Send new messages to the user
-- Close the thread
+## Environment Variables
 
-#### Messages Page (`/messages`)
-
-- View all messages across all threads
-- Filter and search functionality
-- Export message history
-
-#### Macros Page (`/macros`)
-
-- Create new response macros
-- Edit existing macros
-- Delete unused macros
-- Preview macro content
-
-## API Integration
-
-The frontend communicates with the Rust backend API:
-
-- `GET /threads` - Fetch all threads
-- `GET /threads/{id}` - Fetch specific thread with messages
-- `POST /threads/{id}/close` - Close a thread
-- `POST /threads/{id}/messages` - Add message to thread
-- `GET /messages` - Fetch all messages
-- `GET /macros` - Fetch all macros
-- `POST /macros` - Create new macro
-- `DELETE /macros/{name}` - Delete macro
-
-## Security
-
-- All API requests are authenticated
-- Session cookies are HTTP-only and secure
-- CSRF protection via SameSite cookies
-- Role verification on every protected route
-- No sensitive data stored in client-side storage
+- `DISCORD_CLIENT_ID` - Discord application client ID
+- `DISCORD_CLIENT_SECRET` - Discord application client secret
+- `DISCORD_REDIRECT_URI` - OAuth callback URL
+- `JWT_SECRET` - Secret key for JWT token signing
+- `BACKEND_URL` - URL of the Rust backend API
+- `GUILD_ID` - Discord server ID for permission checks
 
 ## Development
 
-### File Structure
-
-```
-web/
-├── src/
-│   ├── lib/
-│   │   ├── auth.ts         # Discord OAuth utilities
-│   │   └── api.ts          # Backend API client
-│   ├── routes/
-│   │   ├── +layout.svelte  # Main layout with navigation
-│   │   ├── +page.svelte    # Threads dashboard
-│   │   ├── auth/           # Authentication routes
-│   │   ├── thread/         # Thread detail pages
-│   │   ├── messages/       # Messages page
-│   │   └── macros/         # Macros management
-│   ├── app.html           # HTML template
-│   └── app.d.ts           # Type definitions
-├── package.json
-├── svelte.config.js
-├── vite.config.js
-└── tsconfig.json
-```
-
-### Adding New Features
-
-1. Create new routes in `src/routes/`
-2. Add API methods to `src/lib/api.ts`
-3. Update types in `src/app.d.ts`
-4. Add navigation links in `src/routes/+layout.svelte`
-
-### Styling
-
-- Uses vanilla CSS with CSS custom properties
-- Follows Discord's design language
-- Responsive design with CSS Grid and Flexbox
-- Dark/light theme ready (currently light theme)
-
-### Debug Mode
-
-Add to your `.env` file:
-
-```env
-NODE_ENV=development
-```
-
-This enables additional logging and error details.
+The dashboard runs on port 5173 in development mode with hot module replacement. It proxies API requests to the backend server and handles CORS appropriately.
