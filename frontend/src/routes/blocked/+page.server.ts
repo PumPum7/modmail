@@ -1,14 +1,11 @@
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
 import type { BlockedUser } from '$lib/api';
+import { api } from '$lib/api';
 
-export const load: PageServerLoad = async ({ fetch, locals: { user } }) => {
+export const load: PageServerLoad = async ({ locals: { user } }) => {
 	try {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/blocked-users`);
-		if (!response.ok) {
-			throw new Error('Failed to fetch blocked users');
-		}
-		const blockedUsers: BlockedUser[] = await response.json();
+		const blockedUsers: BlockedUser[] = await api.getAllBlockedUsers();
 		return {
 			blockedUsers,
 			user

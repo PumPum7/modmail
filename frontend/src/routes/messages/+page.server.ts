@@ -1,14 +1,9 @@
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
-import type { Message } from '$lib/api';
+import { api } from '$lib/api';
 
-export const load: PageServerLoad = async ({ fetch }) => {
+export const load: PageServerLoad = async ({ locals: { user } }) => {
 	try {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/messages`);
-		if (!response.ok) {
-			throw new Error('Failed to fetch messages');
-		}
-		const messages: Message[] = await response.json();
+		const messages = await api.getAllMessages();
 		return {
 			messages
 		};

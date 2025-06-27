@@ -1,16 +1,12 @@
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
+import { api } from '$lib/api';
 
-export const load: PageServerLoad = async ({ fetch, url }) => {
+export const load: PageServerLoad = async ({ url }) => {
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
 
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/threads?page=${page}&limit=${limit}`);
-		if (!response.ok) {
-			throw new Error('Failed to fetch threads');
-		}
-		const data = await response.json();
+		const data = await api.getAllThreads(page, limit);
 		return {
 			threads: data.threads,
 			pagination: data.pagination

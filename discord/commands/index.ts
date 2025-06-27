@@ -50,8 +50,10 @@ export async function handleSlashCommand(
     };
 
     if (interaction.replied || interaction.deferred) {
+      // @ts-expect-error: typescript for some reason doesn't like the flags here, even with it being the new way to handle it
       await interaction.followUp(reply);
     } else {
+      // @ts-expect-error
       await interaction.reply(reply);
     }
   }

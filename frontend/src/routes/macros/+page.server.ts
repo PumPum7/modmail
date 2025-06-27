@@ -1,13 +1,10 @@
-import { PUBLIC_BACKEND_URL } from '$env/static/public';
-import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ fetch }) => {
+import type { PageServerLoad } from './$types';
+import { api } from '$lib/api';
+
+export const load: PageServerLoad = async ({ locals: { user } }) => {
 	try {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/macros`);
-		if (!response.ok) {
-			throw new Error('Failed to fetch macros');
-		}
-		const macros = await response.json();
+		const macros = await api.getAllMacros();
 		return {
 			macros
 		};

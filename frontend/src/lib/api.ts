@@ -69,6 +69,37 @@ export interface ThreadsResponse {
 	pagination: PaginationInfo;
 }
 
+export interface AnalyticsOverview {
+	total_threads: number;
+	open_threads: number;
+	closed_threads: number;
+	total_messages: number;
+	total_notes: number;
+	blocked_users: number;
+	avg_response_time_hours: number | null;
+	threads_today: number;
+	threads_this_week: number;
+	threads_this_month: number;
+}
+
+export interface ThreadVolumeData {
+	date: string;
+	count: number;
+}
+
+export interface ModeratorActivity {
+	moderator_tag: string;
+	message_count: number;
+	note_count: number;
+	threads_closed: number;
+}
+
+export interface ResponseTimeMetrics {
+	avg_first_response_hours: number | null;
+	avg_resolution_time_hours: number | null;
+	median_first_response_hours: number | null;
+}
+
 export class ApiClient {
 	private baseUrl: string;
 
@@ -92,7 +123,7 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async getThread(id: number, page: number = 1, limit: number = 50): Promise<ThreadWithMessages> {
+	async getThread(id: string, page: number = 1, limit: number = 50): Promise<ThreadWithMessages> {
 		const response = await fetch(`${this.baseUrl}/threads/${id}?page=${page}&limit=${limit}`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch thread');
@@ -105,7 +136,7 @@ export class ApiClient {
 		};
 	}
 
-	async getThreadNotes(id: number): Promise<Note[]> {
+	async getThreadNotes(id: string): Promise<Note[]> {
 		const response = await fetch(`${this.baseUrl}/threads/${id}/notes`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch thread notes');
@@ -267,6 +298,30 @@ export class ApiClient {
 		if (!response.ok) {
 			throw new Error('Failed to update macro');
 		}
+		return response.json();
+	}
+
+	async getAnalyticsOverview(): Promise<AnalyticsOverview> {
+		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/overview`);
+		if (!response.ok) throw new Error('Failed to fetch analytics overview');
+		return response.json();
+	}
+
+	async getThreadVolume(): Promise<ThreadVolumeData[]> {
+		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/thread-volume`);
+		if (!response.ok) throw new Error('Failed to fetch thread volume data');
+		return response.json();
+	}
+
+	async getModeratorActivity(): Promise<ModeratorActivity[]> {
+		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/moderator-activity`);
+		if (!response.ok) throw new Error('Failed to fetch moderator activity');
+		return response.json();
+	}
+
+	async getResponseTimes(): Promise<ResponseTimeMetrics> {
+		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/response-times`);
+		if (!response.ok) throw new Error('Failed to fetch response times');
 		return response.json();
 	}
 }

@@ -3,6 +3,7 @@ use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use std::env;
 
+mod analytics;
 mod blocked_users;
 mod db;
 mod macros;
@@ -46,6 +47,10 @@ async fn main() -> std::io::Result<()> {
             .service(macros::get_macro_by_name)
             .service(macros::delete_macro)
             .service(macros::update_macro)
+            .service(analytics::get_analytics_overview)
+            .service(analytics::get_thread_volume)
+            .service(analytics::get_moderator_activity)
+            .service(analytics::get_response_times)
     })
     .bind(("0.0.0.0", 8080))?
     .run()

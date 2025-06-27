@@ -34,6 +34,7 @@
 					<a href="/messages" class="nav-link" class:active={isActive('/messages')}>Messages</a>
 					<a href="/macros" class="nav-link" class:active={isActive('/macros')}>Macros</a>
 					<a href="/blocked" class="nav-link" class:active={isActive('/blocked')}>Blocked Users</a>
+					<a href="/analytics" class="nav-link" class:active={isActive('/analytics')}>Analytics</a>
 					<form action="/api/auth/logout" method="post" class="logout-form">
 						<button type="submit" class="logout-btn">Logout</button>
 					</form>
