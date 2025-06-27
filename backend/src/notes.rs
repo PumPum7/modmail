@@ -6,11 +6,13 @@ use uuid::Uuid;
 
 #[get("/threads/{id}/notes")]
 async fn get_thread_notes(pool: web::Data<PgPool>, thread_id: web::Path<i32>) -> impl Responder {
-    let notes = sqlx::query_as::<_, db::Note>("SELECT * FROM notes WHERE thread_id = $1 ORDER BY created_at ASC")
-        .bind(thread_id.into_inner())
-        .fetch_all(pool.get_ref())
-        .await
-        .unwrap();
+    let notes = sqlx::query_as::<_, db::Note>(
+        "SELECT * FROM notes WHERE thread_id = $1 ORDER BY created_at ASC",
+    )
+    .bind(thread_id.into_inner())
+    .fetch_all(pool.get_ref())
+    .await
+    .unwrap();
 
     web::Json(notes)
 }

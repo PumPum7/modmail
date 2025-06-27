@@ -71,36 +71,32 @@ async fn add_message_to_thread(
     path: web::Path<i32>,
     message: web::Json<CreateMessage>,
 ) -> Result<impl Responder> {
-    let thread_id = path.into_inner();
-    let message_id = Uuid::new_v4();
+    let thread_message_id = Uuid::new_v4();
     let created_at = chrono::Utc::now();
+    let attachments = message
+        .attachments
+        .clone()
+        .unwrap_or_else(|| serde_json::json!([]));
 
-    // Create the message
-    sqlx::query("INSERT INTO messages (id, author_id, author_tag, content, created_at) VALUES ($1, $2, $3, $4, $5)")
-        .bind(&message_id)
-        .bind(&message.author_id)
-        .bind(&message.author_tag)
-        .bind(&message.content)
-        .bind(&created_at)
-        .execute(pool.get_ref())
-        .await
-        .unwrap();
+    let new_message = sqlx::query_as::<_, db::Message>(
+        "INSERT INTO messages (id, author_id, author_tag, content, created_at, attachments) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+    )
+    .bind(&thread_message_id)
+    .bind(&message.author_id)
+    .bind(&message.author_tag)
+    .bind(&message.content)
+    .bind(&created_at)
+    .bind(&attachments)
+    .fetch_one(pool.get_ref())
+    .await
+    .unwrap();
 
-    // Link message to thread
     sqlx::query("INSERT INTO thread_messages (thread_id, message_id) VALUES ($1, $2)")
-        .bind(thread_id)
-        .bind(&message_id)
+        .bind(path.into_inner())
+        .bind(&thread_message_id)
         .execute(pool.get_ref())
         .await
         .unwrap();
-
-    let new_message = db::Message {
-        id: message_id,
-        author_id: message.author_id.clone(),
-        author_tag: message.author_tag.clone(),
-        content: message.content.clone(),
-        created_at,
-    };
 
     Ok(web::Json(new_message))
 }

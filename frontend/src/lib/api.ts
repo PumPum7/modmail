@@ -1,10 +1,18 @@
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
+export interface Attachment {
+	url: string;
+	filename: string;
+	content_type: string;
+	size: number;
+}
+
 export interface Message {
 	id: string;
 	author_id: string;
 	author_tag: string;
 	content: string;
+	attachments: Attachment[];
 	created_at: number;
 	thread_id: number;
 }
@@ -123,6 +131,7 @@ export class ApiClient {
 			author_id: string;
 			author_tag: string;
 			content: string;
+			attachments?: Attachment[];
 		}
 	): Promise<Message> {
 		const response = await fetch(`${this.baseUrl}/threads/${threadId}/messages`, {
@@ -130,7 +139,10 @@ export class ApiClient {
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(message)
+			body: JSON.stringify({
+				...message,
+				attachments: message.attachments || []
+			})
 		});
 		if (!response.ok) {
 			throw new Error('Failed to add message to thread');

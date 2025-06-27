@@ -5,6 +5,7 @@ pub struct CreateMessage {
     pub author_id: String,
     pub author_tag: String,
     pub content: String,
+    pub attachments: Option<serde_json::Value>,
 }
 
 #[derive(Deserialize)]

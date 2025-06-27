@@ -5,10 +5,12 @@ use sqlx::PgPool;
 
 #[get("/blocked-users")]
 async fn get_blocked_users(pool: web::Data<PgPool>) -> impl Responder {
-    let blocked_users = sqlx::query_as::<_, db::BlockedUser>("SELECT * FROM blocked_users ORDER BY created_at DESC")
-        .fetch_all(pool.get_ref())
-        .await
-        .unwrap();
+    let blocked_users = sqlx::query_as::<_, db::BlockedUser>(
+        "SELECT * FROM blocked_users ORDER BY created_at DESC",
+    )
+    .fetch_all(pool.get_ref())
+    .await
+    .unwrap();
 
     web::Json(blocked_users)
 }
@@ -34,7 +36,10 @@ async fn block_user(
 }
 
 #[delete("/blocked-users/{user_id}")]
-async fn unblock_user(pool: web::Data<PgPool>, user_id: web::Path<String>) -> Result<impl Responder> {
+async fn unblock_user(
+    pool: web::Data<PgPool>,
+    user_id: web::Path<String>,
+) -> Result<impl Responder> {
     let rows_affected = sqlx::query("DELETE FROM blocked_users WHERE user_id = $1")
         .bind(user_id.into_inner())
         .execute(pool.get_ref())
@@ -55,11 +60,12 @@ async fn unblock_user(pool: web::Data<PgPool>, user_id: web::Path<String>) -> Re
 
 #[get("/blocked-users/{user_id}")]
 async fn is_user_blocked(pool: web::Data<PgPool>, user_id: web::Path<String>) -> impl Responder {
-    let blocked_user = sqlx::query_as::<_, db::BlockedUser>("SELECT * FROM blocked_users WHERE user_id = $1")
-        .bind(user_id.into_inner())
-        .fetch_optional(pool.get_ref())
-        .await
-        .unwrap();
+    let blocked_user =
+        sqlx::query_as::<_, db::BlockedUser>("SELECT * FROM blocked_users WHERE user_id = $1")
+            .bind(user_id.into_inner())
+            .fetch_optional(pool.get_ref())
+            .await
+            .unwrap();
 
     match blocked_user {
         Some(user) => web::Json(serde_json::json!({"blocked": true, "user": user})),

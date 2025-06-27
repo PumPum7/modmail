@@ -47,6 +47,11 @@
 			loading = true;
 			error = '';
 
+			if (!data.user) {
+				goto('/login?error=not_moderator');
+				return;
+			}
+
 			const response = await fetch('/api/blocked-users', {
 				method: 'POST',
 				headers: {
@@ -55,8 +60,8 @@
 				body: JSON.stringify({
 					user_id: newBlockUserId.trim(),
 					user_tag: newBlockUserTag.trim(),
-					blocked_by: '123456789', // This would typically come from the authenticated user
-					blocked_by_tag: 'Moderator',
+					blocked_by: data.user.id,
+					blocked_by_tag: data.user.username,
 					reason: newBlockReason.trim() || null
 				})
 			});
@@ -119,9 +124,7 @@
 <div class="page">
 	<div class="page-header">
 		<div class="header-left">
-			<button onclick={() => goto('/')} class="back-btn">
-				← Back to Threads
-			</button>
+			<button onclick={() => goto('/')} class="back-btn"> ← Back to Threads </button>
 			<div class="title-section">
 				<h1>Blocked Users</h1>
 				<p>Manage users who are blocked from creating modmail threads</p>
@@ -225,17 +228,19 @@
 								<span>{formatDate(blockedUser.created_at)}</span>
 							</div>
 						</div>
-						
+
 						{#if blockedUser.reason}
 							<div class="reason">
-								<strong>Reason:</strong> {blockedUser.reason}
+								<strong>Reason:</strong>
+								{blockedUser.reason}
 							</div>
 						{/if}
-						
+
 						<div class="blocked-by">
-							<strong>Blocked by:</strong> {blockedUser.blocked_by_tag}
+							<strong>Blocked by:</strong>
+							{blockedUser.blocked_by_tag}
 						</div>
-						
+
 						<div class="actions">
 							<button
 								onclick={() => unblockUser(blockedUser.user_id, blockedUser.user_tag)}

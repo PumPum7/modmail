@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { Clock, MessageCircle, User, ArrowLeft, XCircle, StickyNote } from 'lucide-svelte';
 	import type { PageProps } from './$types';
-	import { formatDate } from '$lib/util';
+	import { formatDate, formatFileSize } from '$lib/util';
 
 	let { data }: PageProps = $props();
 
@@ -49,14 +49,19 @@
 				throw new Error('Thread not found');
 			}
 
+			if (!data.user) {
+				goto('/login?error=not_moderator');
+				return;
+			}
+
 			const response = await fetch(`/api/threads/${data.thread.id}/notes`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					author_id: '123456789', // This would typically come from the authenticated user
-					author_tag: newNoteAuthor.trim(),
+					author_id: data.user.id,
+					author_tag: data.user.username,
 					content: newNoteContent.trim()
 				})
 			});
@@ -201,6 +206,37 @@
 								<div class="message-content">
 									{message.content}
 								</div>
+								{#if message.attachments && message.attachments.length > 0}
+									<div class="attachments">
+										<h4>Attachments:</h4>
+										<div class="attachment-list">
+											{#each message.attachments as attachment}
+												<div class="attachment-item">
+													{#if attachment.content_type?.startsWith('image/')}
+														<img
+															src={attachment.url}
+															alt={attachment.filename}
+															class="attachment-image"
+														/>
+													{:else}
+														<a
+															href={attachment.url}
+															target="_blank"
+															rel="noopener noreferrer"
+															class="attachment-link"
+														>
+															📎 {attachment.filename}
+														</a>
+													{/if}
+													<div class="attachment-info">
+														<span class="filename">{attachment.filename}</span>
+														<span class="filesize">({formatFileSize(attachment.size)} KB)</span>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
 								<div class="message-footer">
 									<span class="message-id">ID: {message.id.slice(0, 8)}...</span>
 								</div>
@@ -529,8 +565,7 @@
 		word-wrap: break-word;
 	}
 
-	.message-footer,
-	.note-footer {
+	.message-footer {
 		display: flex;
 		justify-content: flex-end;
 	}
@@ -645,5 +680,64 @@
 			align-items: flex-start;
 			gap: 0.5rem;
 		}
+	}
+
+	.attachments {
+		margin: 0.75rem 0;
+		padding: 0.75rem;
+		background: #f8f9fa;
+		border-radius: 6px;
+		border: 1px solid #e9ecef;
+	}
+
+	.attachments h4 {
+		margin: 0 0 0.5rem 0;
+		font-size: 0.9rem;
+		color: #495057;
+		font-weight: 600;
+	}
+
+	.attachment-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.attachment-item {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.attachment-image {
+		max-width: 300px;
+		max-height: 200px;
+		border-radius: 4px;
+		border: 1px solid #dee2e6;
+	}
+
+	.attachment-link {
+		color: #0066cc;
+		text-decoration: none;
+		font-weight: 500;
+	}
+
+	.attachment-link:hover {
+		text-decoration: underline;
+	}
+
+	.attachment-info {
+		display: flex;
+		gap: 0.5rem;
+		font-size: 0.85rem;
+		color: #6c757d;
+	}
+
+	.filename {
+		font-weight: 500;
+	}
+
+	.filesize {
+		color: #adb5bd;
 	}
 </style>

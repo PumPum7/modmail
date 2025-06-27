@@ -8,6 +8,7 @@ pub struct Message {
     pub author_id: String,
     pub author_tag: String,
     pub content: String,
+    pub attachments: serde_json::Value,
     #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }

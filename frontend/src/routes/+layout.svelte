@@ -48,6 +48,10 @@
 </div>
 
 <style>
+	:global(body) {
+		font-family: 'Inter', sans-serif;
+	}
+
 	.app {
 		min-height: 100vh;
 		background: #f8f9fa;

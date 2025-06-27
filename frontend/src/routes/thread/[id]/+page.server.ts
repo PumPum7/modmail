@@ -2,7 +2,7 @@ import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
 import type { Message, Thread, Note } from '$lib/api';
 
-export const load: PageServerLoad = async ({ params, fetch }) => {
+export const load: PageServerLoad = async ({ params, fetch, locals: { user } }) => {
 	try {
 		const response = await fetch(`${PUBLIC_BACKEND_URL}/threads/${params.id}`);
 		if (!response.ok) {
@@ -26,7 +26,8 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 		return {
 			thread,
 			messages,
-			notes
+			notes,
+			user
 		};
 	} catch (err) {
 		console.error('Error loading thread:', err);

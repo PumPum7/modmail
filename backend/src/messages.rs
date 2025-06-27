@@ -19,26 +19,25 @@ async fn create_message(
     pool: web::Data<PgPool>,
     message: web::Json<CreateMessage>,
 ) -> Result<impl Responder> {
-    let id = Uuid::new_v4();
     let created_at = chrono::Utc::now();
+    let id = Uuid::new_v4();
+    let attachments = message
+        .attachments
+        .clone()
+        .unwrap_or_else(|| serde_json::json!([]));
 
-    sqlx::query("INSERT INTO messages (id, author_id, author_tag, content, created_at) VALUES ($1, $2, $3, $4, $5)")
-        .bind(&id)
-        .bind(&message.author_id)
-        .bind(&message.author_tag)
-        .bind(&message.content)
-        .bind(&created_at)
-        .execute(pool.get_ref())
-        .await
-        .unwrap();
-
-    let new_message = db::Message {
-        id,
-        author_id: message.author_id.clone(),
-        author_tag: message.author_tag.clone(),
-        content: message.content.clone(),
-        created_at,
-    };
+    let new_message = sqlx::query_as::<_, db::Message>(
+        "INSERT INTO messages (id, author_id, author_tag, content, created_at, attachments) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
+    )
+    .bind(&id)
+    .bind(&message.author_id)
+    .bind(&message.author_tag)
+    .bind(&message.content)
+    .bind(&created_at)
+    .bind(&attachments)
+    .fetch_one(pool.get_ref())
+    .await
+    .unwrap();
 
     Ok(web::Json(new_message))
 }

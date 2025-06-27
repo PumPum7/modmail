@@ -21,6 +21,7 @@ interface MessageData {
   author_id: string;
   author_tag: string;
   content: string;
+  attachments: any[];
   created_at: string;
 }
 
@@ -78,7 +79,8 @@ async function addMessageToThread(
   threadId: number,
   authorId: string,
   authorTag: string,
-  content: string
+  content: string,
+  attachments: any[] = []
 ): Promise<MessageData> {
   const response = await fetch(`${BACKEND_URL}/threads/${threadId}/messages`, {
     method: "POST",
@@ -87,6 +89,7 @@ async function addMessageToThread(
       author_id: authorId,
       author_tag: authorTag,
       content: content,
+      attachments: attachments,
     }),
   });
   return response.json() as Promise<MessageData>;
@@ -179,7 +182,7 @@ async function blockUser(
 
 async function isUserBlocked(userId: string): Promise<boolean> {
   const response = await fetch(`${BACKEND_URL}/blocked-users/${userId}`);
-  const result = await response.json() as { blocked: boolean };
+  const result = (await response.json()) as { blocked: boolean };
   return result.blocked;
 }
 
@@ -408,7 +411,8 @@ async function handleNoteCommand(interaction: ChatInputCommandInteraction) {
 
 async function handleBlockCommand(interaction: ChatInputCommandInteraction) {
   const user = interaction.options.getUser("user", true);
-  const reason = interaction.options.getString("reason") || "No reason provided";
+  const reason =
+    interaction.options.getString("reason") || "No reason provided";
 
   try {
     // Check if user is already blocked
@@ -610,7 +614,9 @@ client.on(Events.MessageCreate, async (message) => {
     // Check if user is blocked
     const isBlocked = await isUserBlocked(userId);
     if (isBlocked) {
-      console.log(`Blocked user ${message.author.tag} (${userId}) tried to send a DM`);
+      console.log(
+        `Blocked user ${message.author.tag} (${userId}) tried to send a DM`
+      );
       return; // Silently ignore messages from blocked users
     }
 
@@ -657,12 +663,29 @@ client.on(Events.MessageCreate, async (message) => {
       channel = await client.channels.fetch(thread.thread_id);
     }
 
+    // Process attachments
+    const attachments = message.attachments.map((attachment) => ({
+      url: attachment.url,
+      filename: attachment.name,
+      content_type: attachment.contentType || "unknown",
+      size: attachment.size,
+    }));
+
+    const nonImageAttachments = attachments.filter(
+      (att) => !att.content_type?.startsWith("image/")
+    );
+
+    const imageAttachments = attachments.filter((att) =>
+      att.content_type?.startsWith("image/")
+    );
+
     // Add message to thread
     await addMessageToThread(
       thread.id,
       message.author.id,
       message.author.tag,
-      message.content
+      message.content,
+      attachments
     );
 
     // Forward message to modmail channel
@@ -672,11 +695,38 @@ client.on(Events.MessageCreate, async (message) => {
         name: message.author.tag,
         iconURL: message.author.displayAvatarURL(),
       })
-      .setDescription(message.content)
+      .setDescription(message.content || "*No text content*")
       .setTimestamp();
 
+    const messageOptions: any = { embeds: [messageEmbed] };
+
+    // Add attachments to the message
+    if (imageAttachments.length > 0) {
+      messageEmbed.setImage(imageAttachments[0]?.url || null);
+    }
+
+    if (nonImageAttachments.length > 0) {
+      messageEmbed.addFields({
+        name: "Attachments",
+        value: nonImageAttachments.map((att) => `[Attachment: ${att.filename}]`).join("\n"),
+      });
+    }
+
     if (channel?.isTextBased() && "send" in channel) {
-      await channel.send({ embeds: [messageEmbed] });
+      await channel.send(messageOptions);
+
+      if (nonImageAttachments.length > 1) {
+        for (const attachment of nonImageAttachments.slice(1)) {
+          const additionalEmbed = new EmbedBuilder()
+            .setColor(0x0099ff)
+            .setTitle("Additional Attachments")
+            .setDescription(`[Attachment: ${attachment.filename}]`)
+            .setTimestamp()
+            .setImage(attachment.url);
+
+          await channel.send({ embeds: [additionalEmbed] });
+        }
+      }
     }
 
     // Send confirmation to user
@@ -726,21 +776,48 @@ client.on(Events.MessageCreate, async (message) => {
     // Get the user
     const user = await client.users.fetch(thread.user_id);
 
+    // Process attachments
+    const attachments = message.attachments.map((attachment) => ({
+      url: attachment.url,
+      filename: attachment.name,
+      content_type: attachment.contentType || "unknown",
+      size: attachment.size,
+    }));
+
     // Send message to user
     const embed = new EmbedBuilder()
       .setColor(0x0099ff)
       .setTitle("Message from Moderators")
-      .setDescription(message.content)
+      .setDescription(message.content || "*No text content*")
       .setTimestamp();
 
-    await user.send({ embeds: [embed] });
+    if (attachments.length > 0) {
+      embed.setImage(attachments[0]?.url || null);
+    }
+
+    const messageOptions: any = { embeds: [embed] };
+
+    await user.send(messageOptions);
+
+    if (attachments.length > 1) {
+      for (const attachment of attachments.slice(1)) {
+        const additionalEmbed = new EmbedBuilder()
+          .setColor(0x0099ff)
+          .setTitle("Additional Attachments")
+          .setDescription(`[Attachment: ${attachment.filename}]`)
+          .setTimestamp()
+          .setImage(attachment.url);
+        await user.send({ embeds: [additionalEmbed] });
+      }
+    }
 
     // Add to thread
     await addMessageToThread(
       thread.id,
       message.author.id,
       message.author.tag,
-      message.content
+      message.content,
+      attachments
     );
 
     // React to confirm message was sent
