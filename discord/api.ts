@@ -144,3 +144,10 @@ export async function isUserBlocked(userId: string): Promise<boolean> {
   const result = (await response.json()) as { blocked: boolean };
   return result.blocked;
 } 
+
+export async function unblockUser(userId: string): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/blocked-users/${userId}`, {
+    method: "DELETE",
+  });
+  return response.json();
+}

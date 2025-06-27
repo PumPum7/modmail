@@ -1,5 +1,5 @@
-import { ChatInputCommandInteraction } from "discord.js";
-import { blockUser, isUserBlocked } from "../api.js";
+import { ChatInputCommandInteraction, MessageFlagsBitField } from "discord.js";
+import { blockUser, isUserBlocked, unblockUser } from "../api.js";
 
 export async function handleBlockCommand(interaction: ChatInputCommandInteraction) {
   const user = interaction.options.getUser("user", true);
@@ -12,7 +12,7 @@ export async function handleBlockCommand(interaction: ChatInputCommandInteractio
     if (isBlocked) {
       await interaction.reply({
         content: `❌ User ${user.tag} is already blocked.`,
-        ephemeral: true,
+        flags: MessageFlagsBitField.Flags.Ephemeral
       });
       return;
     }
@@ -34,7 +34,35 @@ export async function handleBlockCommand(interaction: ChatInputCommandInteractio
     console.error("Error blocking user:", error);
     await interaction.reply({
       content: "❌ Failed to block user.",
-      ephemeral: true,
+        flags: MessageFlagsBitField.Flags.Ephemeral
     });
   }
 } 
+
+export async function handleUnblockCommand(interaction: ChatInputCommandInteraction) {
+  const user = interaction.options.getUser("user", true);
+
+  try {
+    const isBlocked = await isUserBlocked(user.id);
+    if (!isBlocked) {
+      await interaction.reply({
+        content: `❌ User ${user.tag} is not blocked.`,
+        flags: MessageFlagsBitField.Flags.Ephemeral
+      });
+      return;
+    }
+
+    await unblockUser(user.id);
+
+    await interaction.reply({
+      content: `✅ User ${user.tag} has been unblocked.`,
+      flags: MessageFlagsBitField.Flags.Ephemeral
+    });
+  } catch (error) {
+    console.error("Error unblocking user:", error);
+    await interaction.reply({
+      content: "❌ Failed to unblock user.",
+      flags: MessageFlagsBitField.Flags.Ephemeral
+    });
+  }
+}

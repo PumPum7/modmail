@@ -1,8 +1,8 @@
-import { ChatInputCommandInteraction, Client } from "discord.js";
+import { ChatInputCommandInteraction, Client, MessageFlagsBitField } from "discord.js";
 import { handleMessageCommand } from "./message.js";
 import { handleCloseCommand } from "./close.js";
 import { handleNoteCommand } from "./note.js";
-import { handleBlockCommand } from "./block.js";
+import { handleBlockCommand, handleUnblockCommand } from "./block.js";
 import { handleMacroCommand } from "./macro.js";
 import { handleDeleteCommand } from "./delete.js";
 
@@ -26,6 +26,9 @@ export async function handleSlashCommand(
       case "block":
         await handleBlockCommand(interaction);
         break;
+      case "unblock":
+        await handleUnblockCommand(interaction);
+        break;
       case "macro":
         await handleMacroCommand(interaction, client);
         break;
@@ -35,7 +38,7 @@ export async function handleSlashCommand(
       default:
         await interaction.reply({
           content: "❌ Unknown command.",
-          ephemeral: true,
+          flags: MessageFlagsBitField.Flags.Ephemeral,
         });
         break;
     }
@@ -43,7 +46,7 @@ export async function handleSlashCommand(
     console.error("Error handling command:", error);
     const reply = {
       content: "❌ An error occurred while processing your command.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     };
 
     if (interaction.replied || interaction.deferred) {

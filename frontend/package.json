@@ -20,7 +20,7 @@
 		"@types/cookie": "^0.6.0",
 		"cookie": "1.0.2",
 		"discord-api-types": "0.38.13",
-		"lucide-svelte": "0.523.0",
+		"lucide-svelte": "0.525.0",
 		"prettier": "^3.4.2",
 		"prettier-plugin-svelte": "^3.3.3",
 		"svelte": "^5.0.0",

@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, Client } from "discord.js";
+import { ChatInputCommandInteraction, Client, MessageFlagsBitField } from "discord.js";
 import { getThreadByChannelId, closeThread } from "../api.js";
 import { createThreadClosedEmbed, createLogEmbed, createUserClosureNotificationEmbed } from "../utils.js";
 
@@ -15,7 +15,7 @@ export async function handleCloseCommand(
   if (!thread) {
     await interaction.reply({
       content: "❌ This is not a modmail thread.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral
     });
     return;
   }
@@ -23,7 +23,7 @@ export async function handleCloseCommand(
   if (!thread.is_open) {
     await interaction.reply({
       content: "❌ This thread is already closed.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral
     });
     return;
   }

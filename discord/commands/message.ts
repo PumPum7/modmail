@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, ChannelType, Client } from "discord.js";
+import { ChatInputCommandInteraction, ChannelType, Client, MessageFlagsBitField } from "discord.js";
 import { getThreadByUserId, createThread, addMessageToThread } from "../api.js";
 import { 
   createModeratorMessageEmbed, 
@@ -64,13 +64,13 @@ export async function handleMessageCommand(
 
     await interaction.reply({
       content: `✅ Message sent to ${user.tag}`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   } catch (error) {
     console.error("Error sending message:", error);
     await interaction.reply({
       content: "❌ Failed to send message. Please check the user ID.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
 } 

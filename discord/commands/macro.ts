@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, Client } from "discord.js";
+import { ChatInputCommandInteraction, Client, MessageFlagsBitField } from "discord.js";
 import { 
   createMacro, 
   getMacroByName, 
@@ -35,7 +35,7 @@ export async function handleMacroCommand(
     default:
       await interaction.reply({
         content: "❌ Invalid subcommand.",
-        ephemeral: true,
+        flags: MessageFlagsBitField.Flags.Ephemeral,
       });
       break;
   }
@@ -49,12 +49,12 @@ async function handleMacroCreate(interaction: ChatInputCommandInteraction) {
     await createMacro(name, content);
     await interaction.reply({
       content: `✅ Macro "${name}" created successfully.`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   } catch (error) {
     await interaction.reply({
       content: `❌ Failed to create macro. It may already exist.`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
 }
@@ -66,7 +66,7 @@ async function handleMacroSend(interaction: ChatInputCommandInteraction, client:
   if (!macro) {
     await interaction.reply({
       content: `❌ Macro "${macroName}" not found.`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
     return;
   }
@@ -76,7 +76,7 @@ async function handleMacroSend(interaction: ChatInputCommandInteraction, client:
   if (!thread) {
     await interaction.reply({
       content: "❌ This command can only be used in a modmail thread.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
     return;
   }
@@ -107,7 +107,7 @@ async function handleMacroSend(interaction: ChatInputCommandInteraction, client:
     console.error("Error sending macro:", error);
     await interaction.reply({
       content: "❌ Failed to send macro.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
 }
@@ -121,19 +121,19 @@ async function handleMacroDelete(interaction: ChatInputCommandInteraction) {
     if (result.success) {
       await interaction.reply({
         content: `✅ Macro "${deleteNameParam}" deleted successfully.`,
-        ephemeral: true,
+        flags: MessageFlagsBitField.Flags.Ephemeral,
       });
     } else {
       await interaction.reply({
         content: `❌ ${result.message}`,
-        ephemeral: true,
+        flags: MessageFlagsBitField.Flags.Ephemeral,
       });
     }
   } catch (error) {
     console.error("Error deleting macro:", error);
     await interaction.reply({
       content: "❌ Failed to delete macro.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
 }
@@ -143,13 +143,13 @@ async function handleMacroList(interaction: ChatInputCommandInteraction) {
     const macros = await getMacros();
     await interaction.reply({
       content: `✅ Macros: ${macros.map((m) => m.name).join(", ")}`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   } catch (error) {
     console.error("Error listing macros:", error);
     await interaction.reply({
       content: "❌ Failed to list macros.",
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
 }
@@ -162,12 +162,12 @@ async function handleMacroEdit(interaction: ChatInputCommandInteraction) {
     await editMacro(editNameParam, editContent);
     await interaction.reply({
       content: `✅ Macro "${editNameParam}" edited successfully.`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   } catch (error) {
     await interaction.reply({
       content: `❌ Failed to edit macro.`,
-      ephemeral: true,
+      flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
 } 
