@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "deploy": "bun run deploy-commands.ts"
+    "deploy": "bun run scripts/deploy-commands.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
