@@ -11,7 +11,6 @@
 	let error = $state('');
 	let success = $state('');
 	let newNoteContent = $state('');
-	let newNoteAuthor = $state('');
 
 	// Handle server errors
 	$effect.pre(() => {
@@ -36,8 +35,8 @@
 	});
 
 	async function addNote() {
-		if (!newNoteContent.trim() || !newNoteAuthor.trim()) {
-			error = 'Both author and note content are required';
+		if (!newNoteContent.trim()) {
+			error = 'Note content is required';
 			return;
 		}
 
@@ -72,7 +71,6 @@
 
 			success = 'Internal note added successfully!';
 			newNoteContent = '';
-			newNoteAuthor = '';
 			await invalidateAll(); // Refresh server data
 		} catch (err) {
 			error = 'Failed to add note';
@@ -291,18 +289,6 @@
 					<h2>Add Internal Note</h2>
 				</div>
 				<form onsubmit={addNote} class="note-form">
-					<div class="form-row">
-						<div class="form-group">
-							<label for="author">Author:</label>
-							<input
-								id="author"
-								type="text"
-								bind:value={newNoteAuthor}
-								placeholder="Enter author name..."
-								required
-							/>
-						</div>
-					</div>
 					<div class="form-group">
 						<label for="content">Note:</label>
 						<textarea
