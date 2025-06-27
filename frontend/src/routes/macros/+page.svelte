@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import type { Macro } from '$lib/api';
 	import type { PageProps } from './$types';
-	import { api } from '$lib/api';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let loading = $state(false);
 	let error = $state('');
@@ -15,104 +15,64 @@
 	let editingMacro: Macro | null = $state(null);
 	let newMacroName = $state('');
 	let newMacroContent = $state('');
+	let newMacroQuickAccess = $state(false);
 	let editMacroContent = $state('');
+	let editMacroQuickAccess = $state(false);
 
-	async function createMacro() {
-		if (!newMacroName.trim() || !newMacroContent.trim()) {
-			error = 'Both name and content are required';
-			return;
-		}
-
-		try {
-			loading = true;
+	// Handle form results
+	$effect(() => {
+		if (form?.success) {
+			success = form.success;
 			error = '';
-			await api.createMacro({
-				name: newMacroName.trim(),
-				content: newMacroContent.trim()
-			});
-
-			success = 'Macro created successfully!';
-			newMacroName = '';
-			newMacroContent = '';
-			showCreateForm = false;
-			await invalidateAll(); // Refresh server data
-		} catch (err) {
-			error = 'Failed to create macro';
-			console.error('Error creating macro:', err);
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function updateMacro() {
-		if (!editingMacro || !editMacroContent.trim()) {
-			error = 'Content is required';
-			return;
-		}
-
-		try {
-			loading = true;
-			error = '';
-
-			await api.updateMacro(editingMacro.name, editMacroContent.trim());
-
-			success = 'Macro updated successfully!';
-			editingMacro = null;
-			editMacroContent = '';
-			await invalidateAll(); // Refresh server data
-		} catch (err) {
-			error = 'Failed to update macro';
-			console.error('Error updating macro:', err);
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function deleteMacro(name: string) {
-		if (!confirm(`Are you sure you want to delete the macro "${name}"?`)) {
-			return;
-		}
-
-		try {
-			loading = true;
-			error = '';
-
-			let result = await api.deleteMacro(name);
-
-			if (result.success) {
-				success = 'Macro deleted successfully!';
-				await invalidateAll(); // Refresh server data
-			} else {
-				error = result.message || 'Failed to delete macro';
+			// Reset form state on success
+			if (success.includes('created')) {
+				newMacroName = '';
+				newMacroContent = '';
+				newMacroQuickAccess = false;
+				showCreateForm = false;
+			} else if (success.includes('updated')) {
+				editingMacro = null;
+				editMacroContent = '';
+				editMacroQuickAccess = false;
 			}
-		} catch (err) {
-			error = 'Failed to delete macro';
-			console.error('Error deleting macro:', err);
-		} finally {
-			loading = false;
+		} else if (form?.error) {
+			error = form.error;
+			success = '';
 		}
-	}
+		loading = false;
+	});
 
 	function startEditing(macro: Macro) {
 		editingMacro = macro;
 		editMacroContent = macro.content;
+		editMacroQuickAccess = macro.quick_access;
 		showCreateForm = false;
+		clearMessages();
 	}
 
 	function cancelEditing() {
 		editingMacro = null;
 		editMacroContent = '';
+		editMacroQuickAccess = false;
+		clearMessages();
 	}
 
 	function cancelCreate() {
 		showCreateForm = false;
 		newMacroName = '';
 		newMacroContent = '';
+		newMacroQuickAccess = false;
+		clearMessages();
 	}
 
 	function clearMessages() {
 		error = '';
 		success = '';
+	}
+
+	function handleSubmit() {
+		loading = true;
+		clearMessages();
 	}
 </script>
 
@@ -154,11 +114,18 @@
 	{#if showCreateForm}
 		<div class="form-card">
 			<h3>Create New Macro</h3>
-			<form onsubmit={createMacro}>
+			<form method="POST" action="?/create" use:enhance={() => {
+				loading = true;
+				clearMessages();
+				return async ({ result }) => {
+					loading = false;
+				};
+			}}>
 				<div class="form-group">
 					<label for="macro-name">Name:</label>
 					<input
 						id="macro-name"
+						name="name"
 						type="text"
 						bind:value={newMacroName}
 						placeholder="Enter macro name..."
@@ -169,11 +136,23 @@
 					<label for="macro-content">Content:</label>
 					<textarea
 						id="macro-content"
+						name="content"
 						bind:value={newMacroContent}
 						placeholder="Enter macro content..."
 						rows="4"
 						required
 					></textarea>
+				</div>
+				<div class="form-group">
+					<label class="checkbox-label">
+						<input
+							type="checkbox"
+							name="quick_access"
+							value="true"
+							bind:checked={newMacroQuickAccess}
+						/>
+						Quick Access (Show as button in Discord - max 3)
+					</label>
 				</div>
 				<div class="form-actions">
 					<button type="submit" class="btn btn-primary" disabled={loading}>
@@ -188,16 +167,35 @@
 	{#if editingMacro}
 		<div class="form-card">
 			<h3>Edit Macro: {editingMacro.name}</h3>
-			<form onsubmit={updateMacro}>
+			<form method="POST" action="?/update" use:enhance={() => {
+				loading = true;
+				clearMessages();
+				return async ({ result }) => {
+					loading = false;
+				};
+			}}>
+				<input type="hidden" name="name" value={editingMacro.name} />
 				<div class="form-group">
 					<label for="edit-macro-content">Content:</label>
 					<textarea
 						id="edit-macro-content"
+						name="content"
 						bind:value={editMacroContent}
 						placeholder="Enter macro content..."
 						rows="4"
 						required
 					></textarea>
+				</div>
+				<div class="form-group">
+					<label class="checkbox-label">
+						<input
+							type="checkbox"
+							name="quick_access"
+							value="true"
+							bind:checked={editMacroQuickAccess}
+						/>
+						Quick Access (Show as button in Discord - max 3)
+					</label>
 				</div>
 				<div class="form-actions">
 					<button type="submit" class="btn btn-primary" disabled={loading}>
@@ -221,7 +219,12 @@
 			{#each data.macros as macro (macro.id)}
 				<div class="macro-card">
 					<div class="macro-header">
-						<h4>{macro.name}</h4>
+						<h4>
+							{macro.name}
+							{#if macro.quick_access}
+								<span class="quick-access-badge">Quick Access</span>
+							{/if}
+						</h4>
 						<div class="macro-actions">
 							<button
 								class="btn btn-small btn-secondary"
@@ -230,13 +233,22 @@
 							>
 								Edit
 							</button>
-							<button
-								class="btn btn-small btn-danger"
-								onclick={() => deleteMacro(macro.name)}
-								disabled={loading}
-							>
-								Delete
-							</button>
+							<form method="POST" action="?/delete" use:enhance={() => {
+								loading = true;
+								clearMessages();
+								return async ({ result }) => {
+									loading = false;
+								};
+							}}>
+								<input type="hidden" name="name" value={macro.name} />
+								<button
+									class="btn btn-small btn-danger"
+									type="submit"
+									disabled={loading}
+								>
+									Delete
+								</button>
+							</form>
 						</div>
 					</div>
 					<div class="macro-content">
@@ -469,6 +481,28 @@
 		padding: 1rem;
 		border-radius: 0.375rem;
 		border: 1px solid #e5e7eb;
+	}
+
+	.checkbox-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-weight: normal;
+		cursor: pointer;
+	}
+
+	.checkbox-label input[type="checkbox"] {
+		width: auto;
+		margin: 0;
+	}
+
+	.quick-access-badge {
+		background: #4f46e5;
+		color: white;
+		font-size: 0.75rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.25rem;
+		margin-left: 0.5rem;
 	}
 
 	@media (max-width: 768px) {

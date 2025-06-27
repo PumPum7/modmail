@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import {
 		Clock,
 		MessageCircle,
@@ -15,7 +16,7 @@
 	import { formatDate, formatFileSize } from '$lib/util';
 	import { api } from '$lib/api';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let loading = $state(false);
 	let error = $state('');
@@ -27,6 +28,19 @@
 		if (data.error) {
 			error = data.error;
 		}
+	});
+
+	// Handle form results
+	$effect(() => {
+		if (form?.success) {
+			success = form.success as string;
+			error = '';
+			newNoteContent = '';
+		} else if (form?.error) {
+			error = form.error as string;
+			success = '';
+		}
+		loading = false;
 	});
 
 	// Handle authentication
@@ -43,42 +57,6 @@
 			}
 		}
 	});
-
-	async function addNote() {
-		if (!newNoteContent.trim()) {
-			error = 'Note content is required';
-			return;
-		}
-
-		try {
-			loading = true;
-			error = '';
-
-			if (!data.thread) {
-				throw new Error('Thread not found');
-			}
-
-			if (!data.user) {
-				goto('/login?error=not_moderator');
-				return;
-			}
-
-			await api.addNoteToThread(data.thread.id, {
-				author_id: data.user.id,
-				author_tag: data.user.username,
-				content: newNoteContent.trim()
-			});
-
-			success = 'Internal note added successfully!';
-			newNoteContent = '';
-			await invalidateAll(); // Refresh server data
-		} catch (err) {
-			error = 'Failed to add note';
-			console.error('Error adding note:', err);
-		} finally {
-			loading = false;
-		}
-	}
 
 	async function closeThread() {
 		try {
@@ -335,7 +313,13 @@
 				<div class="section-header">
 					<h2>Add Internal Note</h2>
 				</div>
-				<form onsubmit={addNote} class="note-form">
+				<form method="POST" action="?/addNote" use:enhance={() => {
+					loading = true;
+					clearMessages();
+					return async ({ }) => {
+						loading = false;
+					};
+				}} class="note-form">
 					<div class="form-group">
 						<label for="content">Note:</label>
 						<textarea
@@ -344,6 +328,7 @@
 							placeholder="Enter internal note content..."
 							rows="3"
 							required
+							name="content"
 						></textarea>
 					</div>
 					<div class="form-actions">

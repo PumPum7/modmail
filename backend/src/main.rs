@@ -43,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .service(blocked_users::unblock_user)
             .service(blocked_users::is_user_blocked)
             .service(macros::get_macros)
+            .service(macros::get_quick_access_macros)
             .service(macros::create_macro)
             .service(macros::get_macro_by_name)
             .service(macros::delete_macro)

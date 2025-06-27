@@ -29,6 +29,7 @@ pub struct Macro {
     pub id: i32,
     pub name: String,
     pub content: String,
+    pub quick_access: bool,
 }
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]

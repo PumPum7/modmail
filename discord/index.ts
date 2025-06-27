@@ -1,10 +1,11 @@
 import { Client, GatewayIntentBits, Events } from "discord.js";
-import express, { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import "dotenv/config";
 import { handleSlashCommand } from "./commands/index.js";
 import { handleDirectMessage } from "./handlers/dmHandler.js";
 import { handleChannelMessage } from "./handlers/channelHandler.js";
 import { handleWebhookThreadClosed } from "./webhookHandler.js";
+import { handleButtonInteraction } from "./handlers/buttonHandler.js";
 
 // Environment variables
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!;
@@ -24,10 +25,13 @@ client.once(Events.ClientReady, (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
-// Handle slash commands
+// Handle interactions (slash commands and buttons)
 client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-  await handleSlashCommand(interaction, client);
+  if (interaction.isChatInputCommand()) {
+    await handleSlashCommand(interaction, client);
+  } else if (interaction.isButton()) {
+    await handleButtonInteraction(interaction, client);
+  }
 });
 
 // Handle direct messages

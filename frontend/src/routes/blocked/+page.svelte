@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
 	import { Clock, User, Shield, Plus, Trash2 } from 'lucide-svelte';
 	import type { PageProps } from './$types';
 	import { formatDate } from '$lib/util';
-	import { api } from '$lib/api';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 
 	let loading = $state(false);
 	let error = $state('');
@@ -23,6 +23,25 @@
 		}
 	});
 
+	// Handle form results
+	$effect(() => {
+		if (form?.success) {
+			success = form.success as string;
+			error = '';
+			// Reset form state on success
+			if ((form.success as string).includes('blocked successfully')) {
+				newBlockUserId = '';
+				newBlockUserTag = '';
+				newBlockReason = '';
+				showBlockForm = false;
+			}
+		} else if (form?.error) {
+			error = form.error as string;
+			success = '';
+		}
+		loading = false;
+	});
+
 	// Handle authentication
 	$effect(() => {
 		if (typeof window !== 'undefined') {
@@ -37,60 +56,6 @@
 			}
 		}
 	});
-
-	async function blockUser() {
-		if (!newBlockUserId.trim() || !newBlockUserTag.trim()) {
-			error = 'User ID and User Tag are required';
-			return;
-		}
-
-		try {
-			loading = true;
-			error = '';
-
-			if (!data.user) {
-				goto('/login?error=not_moderator');
-				return;
-			}
-
-			await api.blockUser({
-				user_id: newBlockUserId.trim(),
-				user_tag: newBlockUserTag.trim(),
-				blocked_by: data.user.id,
-				blocked_by_tag: data.user.username,
-				reason: newBlockReason.trim() || undefined
-			});
-
-			success = 'User blocked successfully!';
-			newBlockUserId = '';
-			newBlockUserTag = '';
-			newBlockReason = '';
-			showBlockForm = false;
-			await invalidateAll();
-		} catch (err) {
-			error = 'Failed to block user';
-			console.error('Error blocking user:', err);
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function unblockUser(userId: string, userTag: string) {
-		try {
-			loading = true;
-			error = '';
-
-			await api.unblockUser(userId);
-
-			success = `User ${userTag} unblocked successfully!`;
-			await invalidateAll();
-		} catch (err) {
-			error = 'Failed to unblock user';
-			console.error('Error unblocking user:', err);
-		} finally {
-			loading = false;
-		}
-	}
 
 	function formatUserId(userId: string) {
 		return `${userId.slice(0, 4)}...${userId.slice(-4)}`;
@@ -142,12 +107,24 @@
 			<div class="section-header">
 				<h2>Block New User</h2>
 			</div>
-			<form onsubmit={blockUser} class="block-form">
+			<form
+				method="POST"
+				action="?/block"
+				use:enhance={() => {
+					loading = true;
+					clearMessages();
+					return async ({}) => {
+						loading = false;
+					};
+				}}
+				class="block-form"
+			>
 				<div class="form-row">
 					<div class="form-group">
 						<label for="userId">User ID:</label>
 						<input
 							id="userId"
+							name="user_id"
 							type="text"
 							bind:value={newBlockUserId}
 							placeholder="Enter Discord user ID..."
@@ -158,6 +135,7 @@
 						<label for="userTag">User Tag:</label>
 						<input
 							id="userTag"
+							name="user_tag"
 							type="text"
 							bind:value={newBlockUserTag}
 							placeholder="Enter Discord user tag (e.g., username#1234)..."
@@ -227,14 +205,24 @@
 						</div>
 
 						<div class="actions">
-							<button
-								onclick={() => unblockUser(blockedUser.user_id, blockedUser.user_tag)}
-								class="unblock-btn"
-								disabled={loading}
+							<form
+								method="POST"
+								action="?/unblock"
+								use:enhance={() => {
+									loading = true;
+									clearMessages();
+									return async ({}) => {
+										loading = false;
+									};
+								}}
 							>
-								<Trash2 size={16} />
-								Unblock
-							</button>
+								<input type="hidden" name="user_id" value={blockedUser.user_id} />
+								<input type="hidden" name="user_tag" value={blockedUser.user_tag} />
+								<button class="unblock-btn" disabled={loading}>
+									<Trash2 size={16} />
+									Unblock
+								</button>
+							</form>
 						</div>
 					</div>
 				{/each}

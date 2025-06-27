@@ -8,6 +8,7 @@
     "deploy": "bun run scripts/deploy-commands.ts"
   },
   "dependencies": {
+    "@types/express": "^5.0.3",
     "discord.js": "^14.0.0",
     "dotenv": "17.0.0",
     "express": "5.1.0"

@@ -1,12 +1,13 @@
 import { Message, Client, ChannelType } from "discord.js";
-import { getThreadByUserId, createThread, addMessageToThread, isUserBlocked } from "../api.js";
+import { getThreadByUserId, createThread, addMessageToThread, isUserBlocked, getMacros } from "../api.js";
 import { 
   generateWelcomeEmbed, 
   createUserMessageEmbed, 
   processAttachments, 
   addAttachmentsToEmbed,
   generateChannelName,
-  createUserConfirmationEmbed
+  createUserConfirmationEmbed,
+  createQuickReplyButtons
 } from "../utils.js";
 
 const MODMAIL_CATEGORY_ID = process.env.PUBLIC_DISCORD_MODMAIL_CHANNEL_ID!;
@@ -75,8 +76,15 @@ export async function handleDirectMessage(message: Message, client: Client) {
     const messageEmbed = createUserMessageEmbed(message.author, message.content);
     addAttachmentsToEmbed(messageEmbed, attachments);
 
+    const macros = await getMacros();
+
+    const components = createQuickReplyButtons(macros);
+
     if (channel?.isTextBased() && "send" in channel) {
-      await channel.send({ embeds: [messageEmbed] });
+      await channel.send({ 
+        embeds: [messageEmbed],
+        components: components
+      });
     }
 
     // Send confirmation to user
@@ -94,4 +102,4 @@ export async function handleDirectMessage(message: Message, client: Client) {
       console.error("Could not send error message to user:", dmError);
     }
   }
-} 
+}

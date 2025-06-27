@@ -28,6 +28,7 @@ export interface Macro {
 	id: number;
 	name: string;
 	content: string;
+	quick_access: boolean;
 }
 
 export interface Note {
@@ -270,7 +271,7 @@ export class ApiClient {
 		return result === null ? null : result;
 	}
 
-	async createMacro(macro: { name: string; content: string }): Promise<Macro> {
+	async createMacro(macro: { name: string; content: string; quick_access?: boolean }): Promise<Macro> {
 		const response = await fetch(`${this.baseUrl}/macros`, {
 			method: 'POST',
 			headers: {
@@ -294,13 +295,13 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async updateMacro(name: string, content: string): Promise<Macro> {
+	async updateMacro(name: string, content: string, quick_access?: boolean): Promise<Macro> {
 		const response = await fetch(`${this.baseUrl}/macros/${encodeURIComponent(name)}`, {
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ name, content })
+			body: JSON.stringify({ name, content, quick_access })
 		});
 		if (!response.ok) {
 			throw new Error('Failed to update macro');

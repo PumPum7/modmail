@@ -18,6 +18,7 @@ pub struct CreateThread {
 pub struct CreateMacro {
     pub name: String,
     pub content: String,
+    pub quick_access: Option<bool>,
 }
 
 #[derive(Deserialize)]
