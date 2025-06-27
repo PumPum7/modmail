@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
-	import { Clock, MessageCircle, User, XCircle } from 'lucide-svelte';
+	import { Clock, MessageCircle, User, XCircle, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import type { Thread } from '$lib/api';
 	import type { PageProps } from './$types';
 
@@ -70,6 +70,12 @@
 	function formatUserId(userId: string) {
 		return `${userId.slice(0, 4)}...${userId.slice(-4)}`;
 	}
+
+	function goToPage(pageNum: number) {
+		const url = new URL(window.location.href);
+		url.searchParams.set('page', pageNum.toString());
+		goto(url.pathname + url.search);
+	}
 </script>
 
 <svelte:head>
@@ -133,6 +139,50 @@
 				</div>
 			{/each}
 		</div>
+
+		{#if data.pagination && data.pagination.total_pages > 1}
+			<div class="pagination">
+				<div class="pagination-info">
+					Showing {(data.pagination.page - 1) * data.pagination.limit + 1} to {Math.min(
+						data.pagination.page * data.pagination.limit,
+						data.pagination.total_count
+					)} of {data.pagination.total_count} threads
+				</div>
+				<div class="pagination-controls">
+					<button
+						onclick={() => goToPage(data.pagination.page - 1)}
+						class="pagination-btn"
+						disabled={!data.pagination.has_prev}
+					>
+						<ChevronLeft size={16} />
+						Previous
+					</button>
+
+					{#each Array.from({ length: Math.min(5, data.pagination.total_pages) }, (_, i) => {
+						const start = Math.max(1, data.pagination.page - 2);
+						const end = Math.min(data.pagination.total_pages, start + 4);
+						return start + i;
+					}).filter((p) => p <= data.pagination.total_pages) as pageNum}
+						<button
+							onclick={() => goToPage(pageNum)}
+							class="pagination-btn page-btn"
+							class:active={pageNum === data.pagination.page}
+						>
+							{pageNum}
+						</button>
+					{/each}
+
+					<button
+						onclick={() => goToPage(data.pagination.page + 1)}
+						class="pagination-btn"
+						disabled={!data.pagination.has_next}
+					>
+						Next
+						<ChevronRight size={16} />
+					</button>
+				</div>
+			</div>
+		{/if}
 	{/if}
 </div>
 
@@ -320,6 +370,59 @@
 		background: #c73e3e;
 	}
 
+	.pagination {
+		margin-top: 2rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		align-items: center;
+	}
+
+	.pagination-info {
+		color: #666;
+		font-size: 0.9rem;
+	}
+
+	.pagination-controls {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.pagination-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		background: white;
+		border: 1px solid #e0e0e0;
+		padding: 0.5rem 0.75rem;
+		border-radius: 6px;
+		cursor: pointer;
+		font-size: 0.9rem;
+		transition: all 0.2s;
+	}
+
+	.pagination-btn:hover:not(:disabled) {
+		background: #f5f5f5;
+		border-color: #ccc;
+	}
+
+	.pagination-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.page-btn.active {
+		background: #5865f2;
+		color: white;
+		border-color: #5865f2;
+	}
+
+	.page-btn.active:hover {
+		background: #4752c4;
+		border-color: #4752c4;
+	}
+
 	@media (max-width: 768px) {
 		.threads-grid {
 			grid-template-columns: 1fr;
@@ -329,6 +432,11 @@
 			flex-direction: column;
 			gap: 1rem;
 			align-items: stretch;
+		}
+
+		.pagination-controls {
+			flex-wrap: wrap;
+			justify-content: center;
 		}
 	}
 </style>

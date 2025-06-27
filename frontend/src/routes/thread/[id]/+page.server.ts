@@ -1,10 +1,15 @@
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
-import type { Message, Thread, Note } from '$lib/api';
+import type { Note } from '$lib/api';
 
-export const load: PageServerLoad = async ({ params, fetch, locals: { user } }) => {
+export const load: PageServerLoad = async ({ params, fetch, locals: { user }, url }) => {
 	try {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/threads/${params.id}`);
+		const page = parseInt(url.searchParams.get('page') || '1');
+		const limit = parseInt(url.searchParams.get('limit') || '50');
+
+		const response = await fetch(
+			`${PUBLIC_BACKEND_URL}/threads/${params.id}?page=${page}&limit=${limit}`
+		);
 		if (!response.ok) {
 			if (response.status === 404) {
 				return {
@@ -15,7 +20,7 @@ export const load: PageServerLoad = async ({ params, fetch, locals: { user } }) 
 				error: 'Failed to fetch thread'
 			};
 		}
-		const [thread, messages]: [Thread, Message[]] = await response.json();
+		const data = await response.json();
 
 		const notesResponse = await fetch(`${PUBLIC_BACKEND_URL}/threads/${params.id}/notes`);
 		let notes: Note[] = [];
@@ -24,8 +29,9 @@ export const load: PageServerLoad = async ({ params, fetch, locals: { user } }) 
 		}
 
 		return {
-			thread,
-			messages,
+			thread: data.thread,
+			messages: data.messages,
+			pagination: data.pagination,
 			notes,
 			user
 		};

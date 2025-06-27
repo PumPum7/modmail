@@ -52,6 +52,21 @@ export interface BlockedUser {
 export interface ThreadWithMessages {
 	thread: Thread;
 	messages: Message[];
+	pagination?: PaginationInfo;
+}
+
+export interface PaginationInfo {
+	page: number;
+	limit: number;
+	total_count: number;
+	total_pages: number;
+	has_next: boolean;
+	has_prev: boolean;
+}
+
+export interface ThreadsResponse {
+	threads: Thread[];
+	pagination: PaginationInfo;
 }
 
 export class ApiClient {
@@ -69,21 +84,25 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async getAllThreads(): Promise<Thread[]> {
-		const response = await fetch(`${this.baseUrl}/threads`);
+	async getAllThreads(page: number = 1, limit: number = 20): Promise<ThreadsResponse> {
+		const response = await fetch(`${this.baseUrl}/threads?page=${page}&limit=${limit}`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch threads');
 		}
 		return response.json();
 	}
 
-	async getThread(id: number): Promise<ThreadWithMessages> {
-		const response = await fetch(`${this.baseUrl}/threads/${id}`);
+	async getThread(id: number, page: number = 1, limit: number = 50): Promise<ThreadWithMessages> {
+		const response = await fetch(`${this.baseUrl}/threads/${id}?page=${page}&limit=${limit}`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch thread');
 		}
-		const [thread, messages] = await response.json();
-		return { thread, messages };
+		const data = await response.json();
+		return {
+			thread: data.thread,
+			messages: data.messages,
+			pagination: data.pagination
+		};
 	}
 
 	async getThreadNotes(id: number): Promise<Note[]> {

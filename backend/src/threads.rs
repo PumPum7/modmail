@@ -2,17 +2,52 @@ use crate::db;
 use crate::structs::CreateMessage;
 use crate::structs::CreateThread;
 use actix_web::{get, post, web, Responder, Result};
+use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[derive(Deserialize)]
+struct PaginationQuery {
+    page: Option<i64>,
+    limit: Option<i64>,
+}
+
 #[get("/threads")]
-async fn get_threads(pool: web::Data<PgPool>) -> impl Responder {
-    let threads = sqlx::query_as::<_, db::Thread>("SELECT * FROM threads")
-        .fetch_all(pool.get_ref())
+async fn get_threads(
+    pool: web::Data<PgPool>,
+    query: web::Query<PaginationQuery>,
+) -> impl Responder {
+    let page = query.page.unwrap_or(1).max(1);
+    let limit = query.limit.unwrap_or(20).min(100).max(1); // Max 100, min 1
+    let offset = (page - 1) * limit;
+
+    let threads = sqlx::query_as::<_, db::Thread>(
+        "SELECT * FROM threads ORDER BY id DESC LIMIT $1 OFFSET $2",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool.get_ref())
+    .await
+    .unwrap();
+
+    let total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM threads")
+        .fetch_one(pool.get_ref())
         .await
         .unwrap();
 
-    web::Json(threads)
+    let total_pages = (total_count + limit - 1) / limit;
+
+    web::Json(serde_json::json!({
+        "threads": threads,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }))
 }
 
 #[post("/threads")]
@@ -33,20 +68,52 @@ async fn create_thread(
 }
 
 #[get("/threads/{id}")]
-async fn get_thread(pool: web::Data<PgPool>, thread_id: web::Path<i32>) -> impl Responder {
+async fn get_thread(
+    pool: web::Data<PgPool>,
+    thread_id: web::Path<i32>,
+    query: web::Query<PaginationQuery>,
+) -> impl Responder {
     let thread = sqlx::query_as::<_, db::Thread>("SELECT * FROM threads WHERE id = $1")
         .bind(thread_id.into_inner())
         .fetch_one(pool.get_ref())
         .await
         .unwrap();
 
-    let messages = sqlx::query_as::<_, db::Message>("SELECT * FROM messages WHERE id IN (SELECT message_id FROM thread_messages WHERE thread_id = $1)")
-        .bind(thread.id)
-        .fetch_all(pool.get_ref())
-        .await
-        .unwrap();
+    let page = query.page.unwrap_or(1).max(1);
+    let limit = query.limit.unwrap_or(50).min(100).max(1); // Max 100, min 1
+    let offset = (page - 1) * limit;
 
-    web::Json((thread, messages))
+    let messages = sqlx::query_as::<_, db::Message>(
+        "SELECT * FROM messages WHERE id IN (SELECT message_id FROM thread_messages WHERE thread_id = $1) ORDER BY created_at ASC LIMIT $2 OFFSET $3"
+    )
+    .bind(thread.id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(pool.get_ref())
+    .await
+    .unwrap();
+
+    let total_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM thread_messages WHERE thread_id = $1")
+            .bind(thread.id)
+            .fetch_one(pool.get_ref())
+            .await
+            .unwrap();
+
+    let total_pages = (total_count + limit - 1) / limit;
+
+    web::Json(serde_json::json!({
+        "thread": thread,
+        "messages": messages,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1
+        }
+    }))
 }
 
 #[post("/threads/{id}/close")]
