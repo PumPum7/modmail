@@ -19,13 +19,13 @@ export async function createThread(
 
 export async function getThreadByUserId(userId: string): Promise<Thread | null> {
   const response = await fetch(`${BACKEND_URL}/threads`);
-  const threads: Thread[] = (await response.json()) as Thread[];
+  const {threads} = (await response.json()) as {threads: Thread[]};
   return threads.find((t) => t.user_id === userId && t.is_open) || null;
 }
 
 export async function getThreadByChannelId(channelId: string): Promise<Thread | null> {
   const response = await fetch(`${BACKEND_URL}/threads`);
-  const threads: Thread[] = (await response.json()) as Thread[];
+  const {threads} = (await response.json()) as {threads: Thread[]};
   return threads.find((t) => t.thread_id === channelId) || null;
 }
 
