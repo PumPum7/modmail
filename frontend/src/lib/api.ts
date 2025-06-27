@@ -22,6 +22,15 @@ export interface Macro {
 	content: string;
 }
 
+export interface Note {
+	id: string;
+	thread_id: number;
+	author_id: string;
+	author_tag: string;
+	content: string;
+	created_at: number;
+}
+
 export interface ThreadWithMessages {
 	thread: Thread;
 	messages: Message[];
@@ -57,6 +66,35 @@ export class ApiClient {
 		}
 		const [thread, messages] = await response.json();
 		return { thread, messages };
+	}
+
+	async getThreadNotes(id: number): Promise<Note[]> {
+		const response = await fetch(`${this.baseUrl}/threads/${id}/notes`);
+		if (!response.ok) {
+			throw new Error('Failed to fetch thread notes');
+		}
+		return response.json();
+	}
+
+	async addNoteToThread(
+		threadId: number,
+		note: {
+			author_id: string;
+			author_tag: string;
+			content: string;
+		}
+	): Promise<Note> {
+		const response = await fetch(`${this.baseUrl}/threads/${threadId}/notes`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(note)
+		});
+		if (!response.ok) {
+			throw new Error('Failed to add note to thread');
+		}
+		return response.json();
 	}
 
 	async closeThread(id: number): Promise<Thread> {

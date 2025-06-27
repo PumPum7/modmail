@@ -6,6 +6,7 @@ use std::env;
 mod db;
 mod macros;
 mod messages;
+mod notes;
 mod structs;
 mod threads;
 
@@ -33,6 +34,8 @@ async fn main() -> std::io::Result<()> {
             .service(threads::get_thread)
             .service(threads::close_thread)
             .service(threads::add_message_to_thread)
+            .service(notes::get_thread_notes)
+            .service(notes::add_note_to_thread)
             .service(macros::get_macros)
             .service(macros::create_macro)
             .service(macros::get_macro_by_name)

@@ -9,6 +9,8 @@ const commands = [
         .addStringOption(option => option.setName('message').setDescription('The message to send').setRequired(true)),
     new SlashCommandBuilder().setName('close').setDescription('Close the current thread'),
     new SlashCommandBuilder().setName('delete').setDescription('Delete the current thread'),
+    new SlashCommandBuilder().setName('note').setDescription('Add an internal moderator note to the thread')
+        .addStringOption(option => option.setName('content').setDescription('The note content').setRequired(true)),
     new SlashCommandBuilder().setName('macro').setDescription('Manage macros')
         .addSubcommand(subcommand =>
             subcommand.setName('create').setDescription('Create a new macro')

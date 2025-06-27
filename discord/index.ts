@@ -92,6 +92,24 @@ async function addMessageToThread(
   return response.json() as Promise<MessageData>;
 }
 
+async function addNoteToThread(
+  threadId: number,
+  authorId: string,
+  authorTag: string,
+  content: string
+): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/threads/${threadId}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      author_id: authorId,
+      author_tag: authorTag,
+      content: content,
+    }),
+  });
+  return response.json();
+}
+
 async function createMacro(name: string, content: string): Promise<Macro> {
   const response = await fetch(`${BACKEND_URL}/macros`, {
     method: "POST",
@@ -155,6 +173,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         break;
       case "close":
         await handleCloseCommand(interaction);
+        break;
+      case "note":
+        await handleNoteCommand(interaction);
         break;
       case "macro":
         await handleMacroCommand(interaction);
@@ -313,6 +334,45 @@ async function handleCloseCommand(interaction: ChatInputCommandInteraction) {
     await user.send({ embeds: [userEmbed] });
   } catch (error) {
     console.error("Error notifying user of closure:", error);
+  }
+}
+
+async function handleNoteCommand(interaction: ChatInputCommandInteraction) {
+  const noteContent = interaction.options.getString("content", true);
+  const channelId = interaction.channelId;
+
+  // Find thread by channel ID
+  const response = await fetch(`${BACKEND_URL}/threads`);
+  const threads: Thread[] = (await response.json()) as Thread[];
+  const thread = threads.find((t) => t.thread_id === channelId);
+
+  if (!thread) {
+    await interaction.reply({
+      content: "❌ This command can only be used in a modmail thread.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  try {
+    // Add note to thread
+    await addNoteToThread(
+      thread.id,
+      interaction.user.id,
+      interaction.user.tag,
+      noteContent
+    );
+
+    await interaction.reply({
+      content: `✅ Internal note added to thread.`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    console.error("Error adding note:", error);
+    await interaction.reply({
+      content: "❌ Failed to add note.",
+      ephemeral: true,
+    });
   }
 }
 

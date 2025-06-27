@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
-	import { Clock, MessageCircle, User, Send, ArrowLeft, XCircle } from 'lucide-svelte';
+	import { Clock, MessageCircle, User, ArrowLeft, XCircle, StickyNote } from 'lucide-svelte';
 	import type { PageProps } from './$types';
-	import { formatDate, truncateContent } from '$lib/util';
+	import { formatDate } from '$lib/util';
 
 	let { data }: PageProps = $props();
 
 	let loading = $state(false);
 	let error = $state('');
 	let success = $state('');
-	let newMessageContent = $state('');
-	let newMessageAuthor = $state('');
+	let newNoteContent = $state('');
+	let newNoteAuthor = $state('');
 
 	// Handle server errors
 	$effect.pre(() => {
@@ -35,9 +35,9 @@
 		}
 	});
 
-	async function addMessage() {
-		if (!newMessageContent.trim() || !newMessageAuthor.trim()) {
-			error = 'Both author and message content are required';
+	async function addNote() {
+		if (!newNoteContent.trim() || !newNoteAuthor.trim()) {
+			error = 'Both author and note content are required';
 			return;
 		}
 
@@ -45,29 +45,33 @@
 			loading = true;
 			error = '';
 
-			const response = await fetch(`/api/threads/${data.thread.id}/messages`, {
+			if (!data.thread) {
+				throw new Error('Thread not found');
+			}
+
+			const response = await fetch(`/api/threads/${data.thread.id}/notes`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					author_id: '123456789', // This would typically come from the authenticated user
-					author_tag: newMessageAuthor.trim(),
-					content: newMessageContent.trim()
+					author_tag: newNoteAuthor.trim(),
+					content: newNoteContent.trim()
 				})
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to add message');
+				throw new Error('Failed to add note');
 			}
 
-			success = 'Message added successfully!';
-			newMessageContent = '';
-			newMessageAuthor = '';
+			success = 'Internal note added successfully!';
+			newNoteContent = '';
+			newNoteAuthor = '';
 			await invalidateAll(); // Refresh server data
 		} catch (err) {
-			error = 'Failed to add message';
-			console.error('Error adding message:', err);
+			error = 'Failed to add note';
+			console.error('Error adding note:', err);
 		} finally {
 			loading = false;
 		}
@@ -77,6 +81,10 @@
 		try {
 			loading = true;
 			error = '';
+
+			if (!data.thread) {
+				throw new Error('Thread not found');
+			}
 
 			const response = await fetch(`/api/threads/${data.thread.id}/close`, {
 				method: 'POST'
@@ -107,7 +115,7 @@
 </script>
 
 <svelte:head>
-	<title>Thread {data.thread.id} - ModMail</title>
+	<title>Thread {data.thread?.id || 'Error fetching thread'} - ModMail</title>
 </svelte:head>
 
 <div class="page">
@@ -118,28 +126,28 @@
 				Back to Threads
 			</button>
 			<div class="thread-info">
-				<h1>Thread #{data.thread.id}</h1>
+				<h1>Thread #{data.thread?.id || 'Error fetching thread'}</h1>
 				<div class="thread-meta">
 					<div class="meta-item">
 						<User size={14} />
-						<span>User: {formatUserId(data.thread.user_id)}</span>
+						<span>User: {formatUserId(data.thread?.user_id || 'Error fetching thread')}</span>
 					</div>
 					<div class="meta-item">
 						<MessageCircle size={14} />
-						<span>Channel: {data.thread.thread_id.slice(0, 8)}...</span>
+						<span>Channel: {data.thread?.thread_id.slice(0, 8) || 'Error fetching thread'}...</span>
 					</div>
 					<div
 						class="thread-status"
-						class:open={data.thread.is_open}
-						class:closed={!data.thread.is_open}
+						class:open={data.thread?.is_open}
+						class:closed={!data.thread?.is_open}
 					>
-						{data.thread.is_open ? 'Open' : 'Closed'}
+						{data.thread?.is_open ? 'Open' : 'Closed'}
 					</div>
 				</div>
 			</div>
 		</div>
 		<div class="header-actions">
-			{#if data.thread.is_open}
+			{#if data.thread?.is_open}
 				<button onclick={closeThread} class="close-btn" disabled={loading}>
 					<XCircle size={16} />
 					Close Thread
@@ -165,10 +173,10 @@
 	<div class="content">
 		<div class="messages-section">
 			<div class="section-header">
-				<h2>Messages ({data.messages.length})</h2>
+				<h2>Messages ({data.messages?.length || 0})</h2>
 			</div>
 
-			{#if data.messages.length === 0}
+			{#if data.messages?.length === 0}
 				<div class="empty-state">
 					<MessageCircle size={48} color="#ccc" />
 					<h3>No messages yet</h3>
@@ -176,24 +184,64 @@
 				</div>
 			{:else}
 				<div class="messages-list">
-					{#each data.messages as message (message.id)}
-						<div class="message-card">
-							<div class="message-header">
+					{#if data.messages}
+						{#each data.messages as message (message.id)}
+							<div class="message-card">
+								<div class="message-header">
+									<div class="author-info">
+										<User size={16} />
+										<span class="author-tag">{message.author_tag}</span>
+										<span class="author-id">({message.author_id.slice(0, 8)}...)</span>
+									</div>
+									<div class="timestamp">
+										<Clock size={14} />
+										<span>{formatDate(message.created_at)}</span>
+									</div>
+								</div>
+								<div class="message-content">
+									{message.content}
+								</div>
+								<div class="message-footer">
+									<span class="message-id">ID: {message.id.slice(0, 8)}...</span>
+								</div>
+							</div>
+						{/each}
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		<div class="notes-section">
+			<div class="section-header">
+				<h2>Internal Notes ({data.notes?.length || 0})</h2>
+			</div>
+
+			{#if !data.notes || data.notes.length === 0}
+				<div class="empty-state">
+					<StickyNote size={48} color="#ccc" />
+					<h3>No internal notes yet</h3>
+					<p>Internal moderator notes will appear here.</p>
+				</div>
+			{:else}
+				<div class="notes-list">
+					{#each data.notes as note (note.id)}
+						<div class="note-card">
+							<div class="note-header">
 								<div class="author-info">
-									<User size={16} />
-									<span class="author-tag">{message.author_tag}</span>
-									<span class="author-id">({message.author_id.slice(0, 8)}...)</span>
+									<StickyNote size={16} />
+									<span class="author-tag">{note.author_tag}</span>
+									<span class="author-id">({note.author_id.slice(0, 8)}...)</span>
 								</div>
 								<div class="timestamp">
 									<Clock size={14} />
-									<span>{formatDate(message.created_at)}</span>
+									<span>{formatDate(note.created_at)}</span>
 								</div>
 							</div>
-							<div class="message-content">
-								{message.content}
+							<div class="note-content">
+								{note.content}
 							</div>
-							<div class="message-footer">
-								<span class="message-id">ID: {message.id.slice(0, 8)}...</span>
+							<div class="note-footer">
+								<span class="note-id">ID: {note.id.slice(0, 8)}...</span>
 							</div>
 						</div>
 					{/each}
@@ -201,38 +249,38 @@
 			{/if}
 		</div>
 
-		{#if data.thread.is_open}
-			<div class="add-message-section">
+		{#if data.thread?.is_open}
+			<div class="add-note-section">
 				<div class="section-header">
-					<h2>Add Note</h2>
+					<h2>Add Internal Note</h2>
 				</div>
-				<form onsubmit={addMessage} class="message-form">
+				<form onsubmit={addNote} class="note-form">
 					<div class="form-row">
 						<div class="form-group">
 							<label for="author">Author:</label>
 							<input
 								id="author"
 								type="text"
-								bind:value={newMessageAuthor}
+								bind:value={newNoteAuthor}
 								placeholder="Enter author name..."
 								required
 							/>
 						</div>
 					</div>
 					<div class="form-group">
-						<label for="content">Message:</label>
+						<label for="content">Note:</label>
 						<textarea
 							id="content"
-							bind:value={newMessageContent}
-							placeholder="Enter note content..."
+							bind:value={newNoteContent}
+							placeholder="Enter internal note content..."
 							rows="3"
 							required
 						></textarea>
 					</div>
 					<div class="form-actions">
 						<button type="submit" class="send-btn" disabled={loading}>
-							<Send size={16} />
-							{loading ? 'Sending...' : 'Send Note'}
+							<StickyNote size={16} />
+							{loading ? 'Adding...' : 'Add Note'}
 						</button>
 					</div>
 				</form>
@@ -414,13 +462,15 @@
 		color: #999;
 	}
 
-	.messages-list {
+	.messages-list,
+	.notes-list {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
 	}
 
-	.message-card {
+	.message-card,
+	.note-card {
 		background: white;
 		border: 1px solid #e0e0e0;
 		border-radius: 8px;
@@ -428,7 +478,14 @@
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 	}
 
-	.message-header {
+	.note-card {
+		background: #fffbf0;
+		border-color: #f59e0b;
+		border-left: 4px solid #f59e0b;
+	}
+
+	.message-header,
+	.note-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -463,7 +520,8 @@
 		font-size: 0.85rem;
 	}
 
-	.message-content {
+	.message-content,
+	.note-content {
 		margin-bottom: 0.75rem;
 		line-height: 1.5;
 		color: #2c2f36;
@@ -471,12 +529,14 @@
 		word-wrap: break-word;
 	}
 
-	.message-footer {
+	.message-footer,
+	.note-footer {
 		display: flex;
 		justify-content: flex-end;
 	}
 
-	.message-id {
+	.message-id,
+	.note-id {
 		font-family: 'Monaco', 'Menlo', monospace;
 		font-size: 0.8rem;
 		color: #999;
@@ -485,15 +545,15 @@
 		border-radius: 4px;
 	}
 
-	.add-message-section {
-		background: white;
-		border: 1px solid #e0e0e0;
+	.add-note-section {
+		background: #fffbf0;
+		border: 1px solid #f59e0b;
 		border-radius: 8px;
 		padding: 1.5rem;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 	}
 
-	.message-form {
+	.note-form {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -527,8 +587,8 @@
 	.form-group input:focus,
 	.form-group textarea:focus {
 		outline: none;
-		border-color: #4f46e5;
-		box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+		border-color: #f59e0b;
+		box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 	}
 
 	.form-actions {
@@ -540,7 +600,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		background: #28a745;
+		background: #f59e0b;
 		color: white;
 		border: none;
 		padding: 0.75rem 1.5rem;
@@ -551,7 +611,7 @@
 	}
 
 	.send-btn:hover:not(:disabled) {
-		background: #218838;
+		background: #d97706;
 	}
 
 	.send-btn:disabled {
@@ -579,7 +639,8 @@
 			grid-template-columns: 1fr;
 		}
 
-		.message-header {
+		.message-header,
+		.note-header {
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 0.5rem;

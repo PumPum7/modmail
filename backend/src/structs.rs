@@ -18,3 +18,10 @@ pub struct CreateMacro {
     pub name: String,
     pub content: String,
 }
+
+#[derive(Deserialize)]
+pub struct CreateNote {
+    pub author_id: String,
+    pub author_tag: String,
+    pub content: String,
+}

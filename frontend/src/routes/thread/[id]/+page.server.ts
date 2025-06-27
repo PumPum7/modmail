@@ -1,6 +1,6 @@
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { PageServerLoad } from './$types';
-import type { Message, Thread } from '$lib/api';
+import type { Message, Thread, Note } from '$lib/api';
 
 export const load: PageServerLoad = async ({ params, fetch }) => {
 	try {
@@ -16,9 +16,17 @@ export const load: PageServerLoad = async ({ params, fetch }) => {
 			};
 		}
 		const [thread, messages]: [Thread, Message[]] = await response.json();
+
+		const notesResponse = await fetch(`${PUBLIC_BACKEND_URL}/threads/${params.id}/notes`);
+		let notes: Note[] = [];
+		if (notesResponse.ok) {
+			notes = await notesResponse.json();
+		}
+
 		return {
 			thread,
-			messages
+			messages,
+			notes
 		};
 	} catch (err) {
 		console.error('Error loading thread:', err);
