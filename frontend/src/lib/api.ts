@@ -31,6 +31,16 @@ export interface Note {
 	created_at: number;
 }
 
+export interface BlockedUser {
+	id: number;
+	user_id: string;
+	user_tag: string;
+	blocked_by: string;
+	blocked_by_tag: string;
+	reason: string | null;
+	created_at: number;
+}
+
 export interface ThreadWithMessages {
 	thread: Thread;
 	messages: Message[];
@@ -132,6 +142,52 @@ export class ApiClient {
 		const response = await fetch(`${this.baseUrl}/macros`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch macros');
+		}
+		return response.json();
+	}
+
+	async getAllBlockedUsers(): Promise<BlockedUser[]> {
+		const response = await fetch(`${this.baseUrl}/blocked-users`);
+		if (!response.ok) {
+			throw new Error('Failed to fetch blocked users');
+		}
+		return response.json();
+	}
+
+	async blockUser(blockedUser: {
+		user_id: string;
+		user_tag: string;
+		blocked_by: string;
+		blocked_by_tag: string;
+		reason?: string;
+	}): Promise<BlockedUser> {
+		const response = await fetch(`${this.baseUrl}/blocked-users`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(blockedUser)
+		});
+		if (!response.ok) {
+			throw new Error('Failed to block user');
+		}
+		return response.json();
+	}
+
+	async unblockUser(userId: string): Promise<{ success: boolean; message: string }> {
+		const response = await fetch(`${this.baseUrl}/blocked-users/${encodeURIComponent(userId)}`, {
+			method: 'DELETE'
+		});
+		if (!response.ok) {
+			throw new Error('Failed to unblock user');
+		}
+		return response.json();
+	}
+
+	async isUserBlocked(userId: string): Promise<{ blocked: boolean; user?: BlockedUser }> {
+		const response = await fetch(`${this.baseUrl}/blocked-users/${encodeURIComponent(userId)}`);
+		if (!response.ok) {
+			throw new Error('Failed to check if user is blocked');
 		}
 		return response.json();
 	}

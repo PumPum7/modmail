@@ -11,6 +11,9 @@ const commands = [
     new SlashCommandBuilder().setName('delete').setDescription('Delete the current thread'),
     new SlashCommandBuilder().setName('note').setDescription('Add an internal moderator note to the thread')
         .addStringOption(option => option.setName('content').setDescription('The note content').setRequired(true)),
+    new SlashCommandBuilder().setName('block').setDescription('Block a user from creating modmail threads')
+        .addUserOption(option => option.setName('user').setDescription('The user to block').setRequired(true))
+        .addStringOption(option => option.setName('reason').setDescription('Reason for blocking').setRequired(false)),
     new SlashCommandBuilder().setName('macro').setDescription('Manage macros')
         .addSubcommand(subcommand =>
             subcommand.setName('create').setDescription('Create a new macro')

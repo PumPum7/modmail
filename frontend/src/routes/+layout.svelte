@@ -1,167 +1,133 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { LogOut, MessageSquare, Settings, Users } from 'lucide-svelte';
+	import type { LayoutData } from './$types';
 
-	let { data, children } = $props();
+	let { data, children }: { data: LayoutData; children: any } = $props();
 
-	async function logout() {
-		const response = await fetch('/auth/logout', { method: 'POST' });
-		if (response.ok) {
-			goto('/login');
-		}
+	let showMobileMenu = $state(false);
+
+	function isActive(path: string) {
+		return page.url.pathname === path;
 	}
 </script>
 
 <div class="app">
 	{#if data.user}
-		<nav class="sidebar">
-			<div class="sidebar-header">
-				<h1>Modmail Dashboard</h1>
-			</div>
-
-			<div class="nav-links">
-				<a href="/" class:active={page.url.pathname === '/'}>
-					<MessageSquare size={20} />
-					Threads
-				</a>
-				<a href="/messages" class:active={page.url.pathname === '/messages'}>
-					<Users size={20} />
-					All Messages
-				</a>
-				<a href="/macros" class:active={page.url.pathname === '/macros'}>
-					<Settings size={20} />
-					Macros
-				</a>
-			</div>
-
-			<div class="sidebar-footer">
-				<div class="user-info">
-					<img
-						src={data.user.avatar
-							? `https://cdn.discordapp.com/avatars/${data.user.id}/${data.user.avatar}.png`
-							: `https://cdn.discordapp.com/embed/avatars/${parseInt(data.user.discriminator) % 5}.png`}
-						alt={data.user.username}
-						class="avatar"
-					/>
-					<div class="user-details">
-						<div class="username">{data.user.username}</div>
-					</div>
+		<nav class="navbar">
+			<div class="nav-container">
+				<div class="nav-brand">
+					<a href="/" class="brand-link">ModMail Dashboard</a>
 				</div>
-				<button onclick={logout} class="logout-btn">
-					<LogOut size={16} />
-					Logout
+
+				<button
+					class="mobile-menu-btn"
+					onclick={() => (showMobileMenu = !showMobileMenu)}
+					aria-label="Toggle menu"
+				>
+					<span></span>
+					<span></span>
+					<span></span>
 				</button>
+
+				<div class="nav-menu" class:active={showMobileMenu}>
+					<a href="/" class="nav-link" class:active={isActive('/')}>Threads</a>
+					<a href="/messages" class="nav-link" class:active={isActive('/messages')}>Messages</a>
+					<a href="/macros" class="nav-link" class:active={isActive('/macros')}>Macros</a>
+					<a href="/blocked" class="nav-link" class:active={isActive('/blocked')}>Blocked Users</a>
+					<form action="/api/auth/logout" method="post" class="logout-form">
+						<button type="submit" class="logout-btn">Logout</button>
+					</form>
+				</div>
 			</div>
 		</nav>
-
-		<main class="content">
-			{@render children?.()}
-		</main>
-	{:else}
-		<main class="content">
-			{@render children?.()}
-		</main>
 	{/if}
+
+	<main class="main-content" class:with-nav={data.user}>
+		{@render children()}
+	</main>
 </div>
 
 <style>
-	:global(body) {
-		margin: 0;
-		padding: 0;
-		font-family:
-			-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-		background-color: #f5f5f5;
-	}
-
 	.app {
+		min-height: 100vh;
+		background: #f8f9fa;
+	}
+
+	.navbar {
+		background: white;
+		border-bottom: 1px solid #e0e0e0;
+		position: sticky;
+		top: 0;
+		z-index: 100;
+	}
+
+	.nav-container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 0 2rem;
 		display: flex;
-		height: 100vh;
+		justify-content: space-between;
+		align-items: center;
+		height: 4rem;
 	}
 
-	.sidebar {
-		width: 250px;
-		background: #2c2f36;
-		color: white;
-		display: flex;
-		flex-direction: column;
-	}
-
-	.sidebar-header {
-		padding: 1rem;
-		border-bottom: 1px solid #40444b;
-	}
-
-	.sidebar-header h1 {
-		margin: 0;
-		font-size: 1.2rem;
+	.nav-brand .brand-link {
+		font-size: 1.25rem;
 		font-weight: 600;
+		color: #2c2f36;
+		text-decoration: none;
 	}
 
-	.nav-links {
-		flex: 1;
-		padding: 1rem 0;
+	.mobile-menu-btn {
+		display: none;
+		flex-direction: column;
+		background: none;
+		border: none;
+		cursor: pointer;
+		padding: 0.5rem;
+		gap: 0.25rem;
 	}
 
-	.nav-links a {
+	.mobile-menu-btn span {
+		width: 1.5rem;
+		height: 2px;
+		background: #2c2f36;
+		transition: all 0.3s;
+	}
+
+	.nav-menu {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 0.75rem 1rem;
-		color: #b9bbbe;
+		gap: 2rem;
+	}
+
+	.nav-link {
+		color: #666;
 		text-decoration: none;
+		font-weight: 500;
+		padding: 0.5rem 1rem;
+		border-radius: 6px;
 		transition: all 0.2s;
 	}
 
-	.nav-links a:hover {
-		background: #40444b;
-		color: white;
+	.nav-link:hover,
+	.nav-link.active {
+		color: #5865f2;
+		background: #f0f0ff;
 	}
 
-	.nav-links a.active {
-		background: #5865f2;
-		color: white;
-	}
-
-	.sidebar-footer {
-		border-top: 1px solid #40444b;
-		padding: 1rem;
-	}
-
-	.user-info {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-	}
-
-	.avatar {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-	}
-
-	.user-details {
-		flex: 1;
-	}
-
-	.username {
-		font-weight: 600;
-		font-size: 0.9rem;
+	.logout-form {
+		margin: 0;
 	}
 
 	.logout-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
 		background: #ed4245;
-		border: none;
 		color: white;
+		border: none;
 		padding: 0.5rem 1rem;
-		border-radius: 4px;
+		border-radius: 6px;
 		cursor: pointer;
-		font-size: 0.9rem;
-		width: 100%;
+		font-weight: 500;
 		transition: background-color 0.2s;
 	}
 
@@ -169,18 +135,52 @@
 		background: #c73e3e;
 	}
 
-	.content {
-		flex: 1;
-		overflow: auto;
+	.main-content {
 		padding: 2rem;
 	}
 
+	.main-content.with-nav {
+		padding-top: 2rem;
+	}
+
 	@media (max-width: 768px) {
-		.sidebar {
-			width: 200px;
+		.nav-container {
+			padding: 0 1rem;
 		}
 
-		.content {
+		.mobile-menu-btn {
+			display: flex;
+		}
+
+		.nav-menu {
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			background: white;
+			border-bottom: 1px solid #e0e0e0;
+			flex-direction: column;
+			align-items: stretch;
+			gap: 0;
+			padding: 1rem;
+			transform: translateY(-100%);
+			opacity: 0;
+			visibility: hidden;
+			transition: all 0.3s;
+		}
+
+		.nav-menu.active {
+			transform: translateY(0);
+			opacity: 1;
+			visibility: visible;
+		}
+
+		.nav-link {
+			padding: 0.75rem 1rem;
+			border-radius: 6px;
+		}
+
+		.main-content {
 			padding: 1rem;
 		}
 	}

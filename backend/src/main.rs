@@ -3,6 +3,7 @@ use actix_web::{web, App, HttpServer};
 use dotenv::dotenv;
 use std::env;
 
+mod blocked_users;
 mod db;
 mod macros;
 mod messages;
@@ -36,6 +37,10 @@ async fn main() -> std::io::Result<()> {
             .service(threads::add_message_to_thread)
             .service(notes::get_thread_notes)
             .service(notes::add_note_to_thread)
+            .service(blocked_users::get_blocked_users)
+            .service(blocked_users::block_user)
+            .service(blocked_users::unblock_user)
+            .service(blocked_users::is_user_blocked)
             .service(macros::get_macros)
             .service(macros::create_macro)
             .service(macros::get_macro_by_name)

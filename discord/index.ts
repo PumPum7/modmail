@@ -156,6 +156,33 @@ async function editMacro(name: string, content: string): Promise<Macro> {
   return response.json() as Promise<Macro>;
 }
 
+async function blockUser(
+  userId: string,
+  userTag: string,
+  blockedBy: string,
+  blockedByTag: string,
+  reason?: string
+): Promise<any> {
+  const response = await fetch(`${BACKEND_URL}/blocked-users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: userId,
+      user_tag: userTag,
+      blocked_by: blockedBy,
+      blocked_by_tag: blockedByTag,
+      reason: reason || null,
+    }),
+  });
+  return response.json();
+}
+
+async function isUserBlocked(userId: string): Promise<boolean> {
+  const response = await fetch(`${BACKEND_URL}/blocked-users/${userId}`);
+  const result = await response.json() as { blocked: boolean };
+  return result.blocked;
+}
+
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
@@ -176,6 +203,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
         break;
       case "note":
         await handleNoteCommand(interaction);
+        break;
+      case "block":
+        await handleBlockCommand(interaction);
         break;
       case "macro":
         await handleMacroCommand(interaction);
@@ -376,6 +406,43 @@ async function handleNoteCommand(interaction: ChatInputCommandInteraction) {
   }
 }
 
+async function handleBlockCommand(interaction: ChatInputCommandInteraction) {
+  const user = interaction.options.getUser("user", true);
+  const reason = interaction.options.getString("reason") || "No reason provided";
+
+  try {
+    // Check if user is already blocked
+    const isBlocked = await isUserBlocked(user.id);
+    if (isBlocked) {
+      await interaction.reply({
+        content: `❌ User ${user.tag} is already blocked.`,
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Block the user
+    await blockUser(
+      user.id,
+      user.tag,
+      interaction.user.id,
+      interaction.user.tag,
+      reason
+    );
+
+    await interaction.reply({
+      content: `✅ User ${user.tag} has been blocked. Reason: ${reason}`,
+      ephemeral: true,
+    });
+  } catch (error) {
+    console.error("Error blocking user:", error);
+    await interaction.reply({
+      content: "❌ Failed to block user.",
+      ephemeral: true,
+    });
+  }
+}
+
 async function handleMacroCommand(interaction: ChatInputCommandInteraction) {
   const subcommand = interaction.options.getSubcommand();
 
@@ -540,6 +607,13 @@ client.on(Events.MessageCreate, async (message) => {
   const userId = message.author.id;
 
   try {
+    // Check if user is blocked
+    const isBlocked = await isUserBlocked(userId);
+    if (isBlocked) {
+      console.log(`Blocked user ${message.author.tag} (${userId}) tried to send a DM`);
+      return; // Silently ignore messages from blocked users
+    }
+
     // Check if user already has an open thread
     let thread = await getThreadByUserId(userId);
     let channel;

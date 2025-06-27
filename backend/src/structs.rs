@@ -25,3 +25,12 @@ pub struct CreateNote {
     pub author_tag: String,
     pub content: String,
 }
+
+#[derive(Deserialize)]
+pub struct CreateBlockedUser {
+    pub user_id: String,
+    pub user_tag: String,
+    pub blocked_by: String,
+    pub blocked_by_tag: String,
+    pub reason: Option<String>,
+}

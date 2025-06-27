@@ -39,6 +39,18 @@ pub struct Note {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(sqlx::FromRow, Serialize, Deserialize)]
+pub struct BlockedUser {
+    pub id: i32,
+    pub user_id: String,
+    pub user_tag: String,
+    pub blocked_by: String,
+    pub blocked_by_tag: String,
+    pub reason: Option<String>,
+    #[serde(with = "chrono::serde::ts_seconds")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
 pub async fn connect(database_url: &str) -> Result<Pool<Postgres>, sqlx::Error> {
     PgPoolOptions::new()
         .max_connections(5)
