@@ -35,6 +35,8 @@ interface Macro {
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!;
 const MODMAIL_CATEGORY_ID = process.env.PUBLIC_DISCORD_MODMAIL_CHANNEL_ID!;
 const BACKEND_URL = process.env.PUBLIC_BACKEND_URL || "http://localhost:8080";
+const LOG_CHANNEL_ID = process.env.PUBLIC_LOG_CHANNEL;
+const FRONTEND_URL = process.env.PUBLIC_FRONT_END_URL;
 
 // Create Discord client
 const client = new Client({
@@ -354,6 +356,28 @@ async function handleCloseCommand(interaction: ChatInputCommandInteraction) {
     .setTimestamp();
 
   await interaction.reply({ embeds: [embed] });
+
+  // Post to log channel if configured
+  if (LOG_CHANNEL_ID && FRONTEND_URL) {
+    try {
+      const logChannel = await client.channels.fetch(LOG_CHANNEL_ID);
+      if (logChannel?.isTextBased() && "send" in logChannel) {
+        const user = await client.users.fetch(thread.user_id);
+        const threadUrl = `${FRONTEND_URL}/thread/${thread.id}`;
+        
+        const logEmbed = new EmbedBuilder()
+          .setColor(0xff0000)
+          .setTitle("Thread Closed")
+          .setDescription(`**User:** ${user.tag} (${user.id})\n**Closed by:** ${interaction.user.tag}\n**Thread:** [View Thread](${threadUrl})`)
+          .setThumbnail(user.displayAvatarURL())
+          .setTimestamp();
+
+        await logChannel.send({ embeds: [logEmbed] });
+      }
+    } catch (error) {
+      console.error("Error posting to log channel:", error);
+    }
+  }
 
   // Notify user
   try {
