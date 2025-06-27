@@ -9,4 +9,4 @@ RUN bun install
 COPY . .
 
 RUN bun run deploy
-CMD ["bun", "run", "index.ts"]
+CMD ["bun", "run", "start"]

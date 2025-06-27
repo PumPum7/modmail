@@ -4,6 +4,7 @@
 	import { Clock, MessageCircle, User, XCircle, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import type { Thread } from '$lib/api';
 	import type { PageProps } from './$types';
+	import { api } from '$lib/api';
 
 	let { data }: PageProps = $props();
 
@@ -50,13 +51,10 @@
 			loading = true;
 			error = '';
 
-			const response = await fetch(`/api/threads/${thread.id}/close`, {
-				method: 'POST'
+			await api.closeThread(thread.id, {
+				id: data.user?.id || '',
+				tag: data.user?.username || ''
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to close thread');
-			}
 
 			await invalidateAll(); // Refresh server data
 		} catch (err) {

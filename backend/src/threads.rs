@@ -1,6 +1,5 @@
 use crate::db;
-use crate::structs::CreateMessage;
-use crate::structs::CreateThread;
+use crate::structs::{CreateMessage, CreateThread, CloseThread};
 use actix_web::{get, post, web, Responder, Result};
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -120,14 +119,46 @@ async fn get_thread(
 async fn close_thread(
     pool: web::Data<PgPool>,
     thread_id: web::Path<i32>,
+    close_data: Option<web::Json<CloseThread>>,
 ) -> Result<impl Responder> {
+    let thread_id = thread_id.into_inner();
+    
+    // Get thread info before closing
+    let thread = sqlx::query_as::<_, db::Thread>("SELECT * FROM threads WHERE id = $1")
+        .bind(thread_id)
+        .fetch_one(pool.get_ref())
+        .await
+        .unwrap();
+
     let updated_thread = sqlx::query_as::<_, db::Thread>(
         "UPDATE threads SET is_open = FALSE WHERE id = $1 RETURNING *",
     )
-    .bind(thread_id.into_inner())
+    .bind(thread_id)
     .fetch_one(pool.get_ref())
     .await
     .unwrap();
+
+    // If moderator info is provided, send Discord notifications
+    if let Some(close_info) = close_data {
+        let discord_webhook_url = std::env::var("DISCORD_WEBHOOK_URL").ok();
+        
+        if let Some(webhook_url) = discord_webhook_url {
+            let payload = serde_json::json!({
+                "type": "thread_closed",
+                "thread": thread,
+                "closed_by_id": close_info.closed_by_id,
+                "closed_by_tag": close_info.closed_by_tag
+            });
+
+            // Send webhook to Discord bot
+            let client = reqwest::Client::new();
+            let _ = client
+                .post(&webhook_url)
+                .json(&payload)
+                .send()
+                .await;
+        }
+    }
 
     Ok(web::Json(updated_thread))
 }

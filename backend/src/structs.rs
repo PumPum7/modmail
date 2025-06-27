@@ -35,3 +35,9 @@ pub struct CreateBlockedUser {
     pub blocked_by_tag: String,
     pub reason: Option<String>,
 }
+
+#[derive(Deserialize)]
+pub struct CloseThread {
+    pub closed_by_id: String,
+    pub closed_by_tag: String,
+}

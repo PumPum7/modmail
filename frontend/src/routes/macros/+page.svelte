@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { Macro } from '$lib/api';
 	import type { PageProps } from './$types';
+	import { api } from '$lib/api';
 
 	let { data }: PageProps = $props();
 
@@ -25,21 +26,10 @@
 		try {
 			loading = true;
 			error = '';
-
-			const response = await fetch('/api/macros', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					name: newMacroName.trim(),
-					content: newMacroContent.trim()
-				})
+			await api.createMacro({
+				name: newMacroName.trim(),
+				content: newMacroContent.trim()
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to create macro');
-			}
 
 			success = 'Macro created successfully!';
 			newMacroName = '';
@@ -64,20 +54,7 @@
 			loading = true;
 			error = '';
 
-			const response = await fetch(`/api/macros/${encodeURIComponent(editingMacro.name)}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					name: editingMacro.name,
-					content: editMacroContent.trim()
-				})
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to update macro');
-			}
+			await api.updateMacro(editingMacro.name, editMacroContent.trim());
 
 			success = 'Macro updated successfully!';
 			editingMacro = null;
@@ -100,17 +77,9 @@
 			loading = true;
 			error = '';
 
-			const response = await fetch(`/api/macros/${encodeURIComponent(name)}`, {
-				method: 'DELETE'
-			});
+			let result = await api.deleteMacro(name);
 
-			if (!response.ok) {
-				throw new Error('Failed to delete macro');
-			}
-
-			const result = await response.json();
-			if (result.success || result.success !== false) {
-				// Handle both success response formats
+			if (result.success) {
 				success = 'Macro deleted successfully!';
 				await invalidateAll(); // Refresh server data
 			} else {

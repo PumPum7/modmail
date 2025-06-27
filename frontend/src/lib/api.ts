@@ -165,9 +165,16 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async closeThread(id: number): Promise<Thread> {
+	async closeThread(id: number, closedBy?: { id: string; tag: string }): Promise<Thread> {
 		const response = await fetch(`${this.baseUrl}/threads/${id}/close`, {
-			method: 'POST'
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: closedBy ? JSON.stringify({
+				closed_by_id: closedBy.id,
+				closed_by_tag: closedBy.tag
+			}) : undefined
 		});
 		if (!response.ok) {
 			throw new Error('Failed to close thread');

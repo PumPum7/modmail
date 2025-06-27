@@ -1,11 +1,14 @@
 import { Client, GatewayIntentBits, Events } from "discord.js";
+import express, { Request, Response } from "express";
 import "dotenv/config";
 import { handleSlashCommand } from "./commands/index.js";
 import { handleDirectMessage } from "./handlers/dmHandler.js";
 import { handleChannelMessage } from "./handlers/channelHandler.js";
+import { handleWebhookThreadClosed } from "./webhookHandler.js";
 
 // Environment variables
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!;
+const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3001;
 
 // Create Discord client
 const client = new Client({
@@ -35,6 +38,33 @@ client.on(Events.MessageCreate, async (message) => {
 // Handle messages in modmail channels (relay to user)
 client.on(Events.MessageCreate, async (message) => {
   await handleChannelMessage(message, client);
+});
+
+// Create webhook server
+const app = express();
+app.use(express.json());
+
+app.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    const { type, ...payload } = req.body;
+    
+    switch (type) {
+      case 'thread_closed':
+        await handleWebhookThreadClosed(payload, client);
+        break;
+      default:
+        console.log('Unknown webhook type:', type);
+    }
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.listen(WEBHOOK_PORT, () => {
+  console.log(`Webhook server listening on port ${WEBHOOK_PORT}`);
 });
 
 // Login to Discord

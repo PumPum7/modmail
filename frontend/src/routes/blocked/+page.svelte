@@ -4,6 +4,7 @@
 	import { Clock, User, Shield, Plus, Trash2 } from 'lucide-svelte';
 	import type { PageProps } from './$types';
 	import { formatDate } from '$lib/util';
+	import { api } from '$lib/api';
 
 	let { data }: PageProps = $props();
 
@@ -52,23 +53,13 @@
 				return;
 			}
 
-			const response = await fetch('/api/blocked-users', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					user_id: newBlockUserId.trim(),
-					user_tag: newBlockUserTag.trim(),
-					blocked_by: data.user.id,
-					blocked_by_tag: data.user.username,
-					reason: newBlockReason.trim() || null
-				})
+			await api.blockUser({
+				user_id: newBlockUserId.trim(),
+				user_tag: newBlockUserTag.trim(),
+				blocked_by: data.user.id,
+				blocked_by_tag: data.user.username,
+				reason: newBlockReason.trim() || undefined
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to block user');
-			}
 
 			success = 'User blocked successfully!';
 			newBlockUserId = '';
@@ -89,13 +80,7 @@
 			loading = true;
 			error = '';
 
-			const response = await fetch(`/api/blocked-users/${encodeURIComponent(userId)}`, {
-				method: 'DELETE'
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to unblock user');
-			}
+			await api.unblockUser(userId);
 
 			success = `User ${userTag} unblocked successfully!`;
 			await invalidateAll();

@@ -13,6 +13,7 @@
 	} from 'lucide-svelte';
 	import type { PageProps } from './$types';
 	import { formatDate, formatFileSize } from '$lib/util';
+	import { api } from '$lib/api';
 
 	let { data }: PageProps = $props();
 
@@ -62,21 +63,11 @@
 				return;
 			}
 
-			const response = await fetch(`/api/threads/${data.thread.id}/notes`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					author_id: data.user.id,
-					author_tag: data.user.username,
-					content: newNoteContent.trim()
-				})
+			await api.addNoteToThread(data.thread.id, {
+				author_id: data.user.id,
+				author_tag: data.user.username,
+				content: newNoteContent.trim()
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to add note');
-			}
 
 			success = 'Internal note added successfully!';
 			newNoteContent = '';
@@ -98,13 +89,10 @@
 				throw new Error('Thread not found');
 			}
 
-			const response = await fetch(`/api/threads/${data.thread.id}/close`, {
-				method: 'POST'
+			await api.closeThread(data.thread.id, {
+				id: data.user?.id || '',
+				tag: data.user?.username || ''
 			});
-
-			if (!response.ok) {
-				throw new Error('Failed to close thread');
-			}
 
 			success = 'Thread closed successfully!';
 			await invalidateAll(); // Refresh server data
