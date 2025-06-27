@@ -3,7 +3,6 @@ use sqlx::{postgres::PgPoolOptions, types::uuid::Uuid, Pool, Postgres};
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct Message {
-    #[serde(with = "uuid::serde::compact")]
     pub id: Uuid,
     pub author_id: String,
     pub author_tag: String,
@@ -30,7 +29,6 @@ pub struct Macro {
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct Note {
-    #[serde(with = "uuid::serde::compact")]
     pub id: Uuid,
     pub thread_id: i32,
     pub author_id: String,
