@@ -1,6 +1,6 @@
 use crate::db;
-use crate::structs::{CreateMessage, CreateThread, CloseThread};
-use actix_web::{get, post, web, Responder, Result};
+use crate::structs::{CreateMessage, CreateThread, CloseThread, UpdateThreadUrgency};
+use actix_web::{get, post, put, web, Responder, Result};
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -54,11 +54,14 @@ async fn create_thread(
     pool: web::Data<PgPool>,
     thread: web::Json<CreateThread>,
 ) -> Result<impl Responder> {
+    let urgency = thread.urgency.as_deref().unwrap_or("Medium");
+    
     let new_thread = sqlx::query_as::<_, db::Thread>(
-        "INSERT INTO threads (user_id, thread_id) VALUES ($1, $2) RETURNING *",
+        "INSERT INTO threads (user_id, thread_id, urgency) VALUES ($1, $2, $3) RETURNING *",
     )
     .bind(&thread.user_id)
     .bind(&thread.thread_id)
+    .bind(urgency)
     .fetch_one(pool.get_ref())
     .await
     .unwrap();
@@ -197,4 +200,24 @@ async fn add_message_to_thread(
         .unwrap();
 
     Ok(web::Json(new_message))
+}
+
+#[put("/threads/{id}/urgency")]
+async fn update_thread_urgency(
+    pool: web::Data<PgPool>,
+    thread_id: web::Path<i32>,
+    urgency_data: web::Json<UpdateThreadUrgency>,
+) -> Result<impl Responder> {
+    let thread_id = thread_id.into_inner();
+    
+    let updated_thread = sqlx::query_as::<_, db::Thread>(
+        "UPDATE threads SET urgency = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
+    )
+    .bind(&urgency_data.urgency)
+    .bind(thread_id)
+    .fetch_one(pool.get_ref())
+    .await
+    .unwrap();
+
+    Ok(web::Json(updated_thread))
 }

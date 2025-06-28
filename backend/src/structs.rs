@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 pub struct CreateMessage {
@@ -12,6 +12,7 @@ pub struct CreateMessage {
 pub struct CreateThread {
     pub user_id: String,
     pub thread_id: String,
+    pub urgency: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -41,4 +42,9 @@ pub struct CreateBlockedUser {
 pub struct CloseThread {
     pub closed_by_id: String,
     pub closed_by_tag: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateThreadUrgency {
+    pub urgency: String,
 }

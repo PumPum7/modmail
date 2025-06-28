@@ -18,6 +18,7 @@ pub struct Thread {
     pub user_id: String,
     pub thread_id: String,
     pub is_open: bool,
+    pub urgency: String,
     #[serde(with = "chrono::serde::ts_seconds_option")]
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(with = "chrono::serde::ts_seconds_option")]

@@ -22,6 +22,7 @@ export interface Thread {
 	user_id: string;
 	thread_id: string;
 	is_open: boolean;
+	urgency: string;
 }
 
 export interface Macro {
@@ -305,6 +306,20 @@ export class ApiClient {
 		});
 		if (!response.ok) {
 			throw new Error('Failed to update macro');
+		}
+		return response.json();
+	}
+
+	async updateThreadUrgency(threadId: number, urgency: string): Promise<Thread> {
+		const response = await fetch(`${this.baseUrl}/threads/${threadId}/urgency`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ urgency })
+		});
+		if (!response.ok) {
+			throw new Error('Failed to update thread urgency');
 		}
 		return response.json();
 	}

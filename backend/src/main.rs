@@ -36,6 +36,7 @@ async fn main() -> std::io::Result<()> {
             .service(threads::get_thread)
             .service(threads::close_thread)
             .service(threads::add_message_to_thread)
+            .service(threads::update_thread_urgency)
             .service(notes::get_thread_notes)
             .service(notes::add_note_to_thread)
             .service(blocked_users::get_blocked_users)

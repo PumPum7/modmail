@@ -4,7 +4,8 @@ const BACKEND_URL = process.env.PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 export async function createThread(
   userId: string,
-  channelId: string
+  channelId: string,
+  urgency?: string
 ): Promise<Thread> {
   const response = await fetch(`${BACKEND_URL}/threads`, {
     method: "POST",
@@ -12,6 +13,7 @@ export async function createThread(
     body: JSON.stringify({
       user_id: userId,
       thread_id: channelId,
+      urgency: urgency || "Medium",
     }),
   });
   return response.json() as Promise<Thread>;
@@ -150,4 +152,16 @@ export async function unblockUser(userId: string): Promise<any> {
     method: "DELETE",
   });
   return response.json();
+}
+
+export async function updateThreadUrgency(
+  threadId: number,
+  urgency: string
+): Promise<Thread> {
+  const response = await fetch(`${BACKEND_URL}/threads/${threadId}/urgency`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ urgency }),
+  });
+  return response.json() as Promise<Thread>;
 }

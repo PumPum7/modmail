@@ -5,6 +5,7 @@ import { handleNoteCommand } from "./note.js";
 import { handleBlockCommand, handleUnblockCommand } from "./block.js";
 import { handleMacroCommand } from "./macro.js";
 import { handleDeleteCommand } from "./delete.js";
+import { handleUrgencyCommand } from "./urgency.js";
 
 export async function handleSlashCommand(
   interaction: ChatInputCommandInteraction,
@@ -35,6 +36,9 @@ export async function handleSlashCommand(
       case "delete":
         await handleDeleteCommand(interaction, client);
         break;
+      case "urgency":
+        await handleUrgencyCommand(interaction);
+        break;
       default:
         await interaction.reply({
           content: "❌ Unknown command.",
@@ -57,4 +61,4 @@ export async function handleSlashCommand(
       await interaction.reply(reply);
     }
   }
-} 
+}

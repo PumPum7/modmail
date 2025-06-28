@@ -22,11 +22,16 @@
 	let error = $state('');
 	let success = $state('');
 	let newNoteContent = $state('');
+	let editingUrgency = $state(false);
+	let selectedUrgency = $state('');
 
 	// Handle server errors
 	$effect.pre(() => {
 		if (data.error) {
 			error = data.error;
+		}
+		if (data.thread) {
+			selectedUrgency = data.thread.urgency;
 		}
 	});
 
@@ -36,6 +41,7 @@
 			success = form.success as string;
 			error = '';
 			newNoteContent = '';
+			invalidateAll();
 		} else if (form?.error) {
 			error = form.error as string;
 			success = '';
@@ -96,6 +102,28 @@
 		url.searchParams.set('page', pageNum.toString());
 		goto(url.pathname + url.search);
 	}
+
+
+
+	function getUrgencyColor(urgency: string) {
+		switch (urgency?.toLowerCase()) {
+			case 'urgent': return '#dc2626'; // red-600
+			case 'high': return '#ea580c'; // orange-600
+			case 'medium': return '#ca8a04'; // yellow-600
+			case 'low': return '#16a34a'; // green-600
+			default: return '#6b7280'; // gray-500
+		}
+	}
+
+	function getUrgencyBgColor(urgency: string) {
+		switch (urgency?.toLowerCase()) {
+			case 'urgent': return '#fee2e2'; // red-100
+			case 'high': return '#fed7aa'; // orange-100
+			case 'medium': return '#fef3c7'; // yellow-100
+			case 'low': return '#dcfce7'; // green-100
+			default: return '#f3f4f6'; // gray-100
+		}
+	}
 </script>
 
 <svelte:head>
@@ -119,6 +147,45 @@
 					<div class="meta-item">
 						<MessageCircle size={14} />
 						<span>Channel: {data.thread?.thread_id.slice(0, 8) || 'Error fetching thread'}...</span>
+					</div>
+					<div class="meta-item urgency-item">
+						{#if editingUrgency}
+							<form method="POST" action="?/updateUrgency" use:enhance={() => {
+								loading = true;
+								return async ({ result }) => {
+									if (result.type === 'success') {
+										editingUrgency = false;
+									}
+									loading = false;
+								};
+							}}>
+								<select name="urgency" bind:value={selectedUrgency} class="urgency-select" required>
+									<option value="Low">Low</option>
+									<option value="Medium">Medium</option>
+									<option value="High">High</option>
+									<option value="Urgent">Urgent</option>
+								</select>
+								<button type="submit" class="urgency-save-btn" disabled={loading}>
+									Save
+								</button>
+								<button type="button" onclick={() => { editingUrgency = false; selectedUrgency = data.thread?.urgency || 'Medium'; }} class="urgency-cancel-btn">
+									Cancel
+								</button>
+							</form>
+						{:else}
+							<span>Priority:</span>
+							<div 
+								class="urgency-badge" 
+								style="color: {getUrgencyColor(data.thread?.urgency || 'Medium')}; background-color: {getUrgencyBgColor(data.thread?.urgency || 'Medium')}"
+							>
+								{data.thread?.urgency || 'Medium'}
+							</div>
+							{#if data.thread?.is_open && data.user?.isModerator}
+								<button onclick={() => editingUrgency = true} class="urgency-edit-btn">
+									Edit
+								</button>
+							{/if}
+						{/if}
 					</div>
 					<div
 						class="thread-status"
@@ -803,5 +870,80 @@
 
 	.filesize {
 		color: #adb5bd;
+	}
+
+	.urgency-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.urgency-badge {
+		padding: 0.25rem 0.75rem;
+		border-radius: 12px;
+		font-size: 0.85rem;
+		font-weight: 500;
+		text-transform: capitalize;
+		border: 1px solid currentColor;
+	}
+
+	.urgency-edit-btn {
+		background: none;
+		border: 1px solid #d1d5db;
+		color: #6b7280;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.8rem;
+		transition: all 0.2s;
+	}
+
+	.urgency-edit-btn:hover {
+		background: #f3f4f6;
+		border-color: #9ca3af;
+	}
+
+	.urgency-select {
+		padding: 0.25rem 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		font-size: 0.85rem;
+	}
+
+	.urgency-save-btn {
+		background: #10b981;
+		color: white;
+		border: none;
+		padding: 0.25rem 0.75rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.8rem;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.urgency-save-btn:hover:not(:disabled) {
+		background: #059669;
+	}
+
+	.urgency-save-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.urgency-cancel-btn {
+		background: #6b7280;
+		color: white;
+		border: none;
+		padding: 0.25rem 0.75rem;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.8rem;
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.urgency-cancel-btn:hover {
+		background: #4b5563;
 	}
 </style>

@@ -95,8 +95,9 @@ async function createThreadForUser(message: Message, client: Client, introData?:
     topic: `Modmail thread for ${message.author.tag} (${message.author.id})`,
   });
 
-  // Create thread in database
-  const thread = await createThread(message.author.id, channel.id);
+  // Create thread in database with urgency from intro data
+  const urgency = introData?.urgency || "Medium";
+  const thread = await createThread(message.author.id, channel.id, urgency);
 
   // Send welcome message to channel with intro data if available
   const welcomeEmbed = generateWelcomeEmbed(message.author, guild, introData);

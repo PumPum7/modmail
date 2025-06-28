@@ -42,7 +42,7 @@ export async function handleMessageCommand(
       }
 
       // Create thread in database
-      thread = await createThread(user.id, channel.id);
+      thread = await createThread(user.id, channel.id, "Medium");
     } else {
       channel = await client.channels.fetch(thread.thread_id);
     }
@@ -73,4 +73,4 @@ export async function handleMessageCommand(
       flags: MessageFlagsBitField.Flags.Ephemeral,
     });
   }
-} 
+}

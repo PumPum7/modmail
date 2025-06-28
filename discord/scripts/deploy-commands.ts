@@ -16,6 +16,17 @@ const commands = [
         .addStringOption(option => option.setName('reason').setDescription('Reason for blocking').setRequired(false)),
     new SlashCommandBuilder().setName('unblock').setDescription('Unblock a user from creating modmail threads')
         .addUserOption(option => option.setName('user').setDescription('The user to unblock').setRequired(true)),
+    new SlashCommandBuilder().setName('urgency').setDescription('Change the urgency level of the current thread')
+        .addStringOption(option => 
+            option.setName('level')
+                .setDescription('The urgency level')
+                .setRequired(true)
+                .addChoices(
+                    { name: 'Low', value: 'Low' },
+                    { name: 'Medium', value: 'Medium' },
+                    { name: 'High', value: 'High' },
+                    { name: 'Urgent', value: 'Urgent' }
+                )),
     new SlashCommandBuilder().setName('macro').setDescription('Manage macros')
         .addSubcommand(subcommand =>
             subcommand.setName('create').setDescription('Create a new macro')

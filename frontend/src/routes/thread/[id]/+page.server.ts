@@ -70,5 +70,48 @@ export const actions: Actions = {
 				error: 'Failed to add note'
 			});
 		}
+	},
+
+	updateUrgency: async ({ params, request, locals: { user } }) => {
+		if (!user) {
+			return fail(401, {
+				error: 'Authentication required'
+			});
+		}
+
+		if (!user.isModerator) {
+			return fail(403, {
+				error: 'Moderator access required'
+			});
+		}
+
+		const data = await request.formData();
+		const urgency = data.get('urgency')?.toString();
+
+		if (!urgency) {
+			return fail(400, {
+				error: 'Urgency level is required'
+			});
+		}
+
+		const validUrgencies = ['Low', 'Medium', 'High', 'Urgent'];
+		if (!validUrgencies.includes(urgency)) {
+			return fail(400, {
+				error: 'Invalid urgency level'
+			});
+		}
+
+		try {
+			await api.updateThreadUrgency(parseInt(params.id), urgency);
+
+			return {
+				success: 'Thread urgency updated successfully!'
+			};
+		} catch (error) {
+			console.error('Error updating urgency:', error);
+			return fail(500, {
+				error: 'Failed to update thread urgency'
+			});
+		}
 	}
 };
