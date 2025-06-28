@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events, MessageFlagsBitField } from "discord.js";
+import { Client, GatewayIntentBits, Events, MessageFlagsBitField, Partials } from "discord.js";
 import express, { type Request, type Response } from "express";
 import "dotenv/config";
 import { handleSlashCommand } from "./commands/index.js";
@@ -16,8 +16,12 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
+  ],
+  partials: [
+    Partials.Channel,
   ],
 });
 

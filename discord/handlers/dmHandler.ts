@@ -1,4 +1,4 @@
-import { Message, Client, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { Message, Client, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 import { getThreadByUserId, createThread, addMessageToThread, isUserBlocked, getMacros } from "../api.js";
 import { 
   generateWelcomeEmbed, 
@@ -16,7 +16,7 @@ const MODMAIL_CATEGORY_ID = process.env.PUBLIC_DISCORD_MODMAIL_CHANNEL_ID!;
 
 export async function handleDirectMessage(message: Message, client: Client) {
   // Ignore bot messages and messages from guilds
-  if (message.author.bot || message.guild) return;
+  if (message.author.bot || message.channel.type !== ChannelType.DM) return;
 
   const userId = message.author.id;
 
