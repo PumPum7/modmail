@@ -1,4 +1,4 @@
-import { EmbedBuilder, User, Guild, Client, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { EmbedBuilder, User, Guild, Client, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 import type { Attachment } from "./types.js";
 
 const RANDOMIZE_NAMES = process.env.RANDOMIZE_NAMES === "true";
@@ -11,16 +11,24 @@ export function generateRandomString(): string {
   );
 }
 
-export function generateWelcomeEmbed(user: User, guild: Guild): EmbedBuilder {
+export function generateWelcomeEmbed(user: User, guild: Guild, introData?: any): EmbedBuilder {
   const member = guild.members.cache.get(user.id);
+  let description = `**User:** ${user.tag} (${
+    user.id
+  })\n**Account Created:** ${user.createdAt.toLocaleDateString()}\n**User Joined:** ${member?.joinedAt?.toLocaleDateString()}`;
+  
+  // Add intro data if available
+  if (introData) {
+    description += `\n\n**User Introduction:**`;
+    if (introData.subject) description += `\n**Subject:** ${introData.subject}`;
+    if (introData.description) description += `\n**Description:** ${introData.description}`;
+    if (introData.urgency) description += `\n**Priority:** ${introData.urgency}`;
+  }
+  
   return new EmbedBuilder()
     .setColor(0x0099ff)
     .setTitle("New Modmail Thread")
-    .setDescription(
-      `**User:** ${user.tag} (${
-        user.id
-      })\n**Account Created:** ${user.createdAt.toLocaleDateString()}\n**User Joined:** ${member?.joinedAt?.toLocaleDateString()}`
-    )
+    .setDescription(description)
     .setThumbnail(user.displayAvatarURL());
 }
 
@@ -150,4 +158,57 @@ export function createQuickReplyButtons(macros: any[]) {
   
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
   return [row];
+}
+
+export function createIntroPromptEmbed(): EmbedBuilder {
+  return new EmbedBuilder()
+    .setColor(0x0099ff)
+    .setTitle("Welcome to Modmail")
+    .setDescription(
+      "Thank you for contacting our moderation team! Before we begin, please click the button below to provide some details about your inquiry. This helps our moderators assist you more effectively."
+    )
+    .addFields({
+      name: "What happens next?",
+      value: "• Fill out a quick form with your inquiry details\n• Your message will be forwarded to our moderation team\n• A moderator will respond to you as soon as possible",
+      inline: false
+    })
+    .setFooter({ text: "Click 'Start Conversation' to begin" });
+}
+
+export function createIntroModal(userId: string): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(`intro_modal_${userId}`)
+    .setTitle("Contact Information");
+
+  const subjectInput = new TextInputBuilder()
+    .setCustomId("subject")
+    .setLabel("Subject/Topic")
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder("Brief summary of your inquiry...")
+    .setRequired(true)
+    .setMaxLength(100);
+
+  const descriptionInput = new TextInputBuilder()
+    .setCustomId("description")
+    .setLabel("Detailed Description")
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder("Please provide more details about your inquiry...")
+    .setRequired(true)
+    .setMaxLength(1000);
+
+  const urgencyInput = new TextInputBuilder()
+    .setCustomId("urgency")
+    .setLabel("Priority Level")
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder("Low, Medium, High, or Urgent")
+    .setRequired(false)
+    .setMaxLength(20);
+
+  const subjectRow = new ActionRowBuilder<TextInputBuilder>().addComponents(subjectInput);
+  const descriptionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+  const urgencyRow = new ActionRowBuilder<TextInputBuilder>().addComponents(urgencyInput);
+
+  modal.addComponents(subjectRow, descriptionRow, urgencyRow);
+
+  return modal;
 }
