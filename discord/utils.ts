@@ -147,14 +147,17 @@ export function createUserConfirmationEmbed(): EmbedBuilder {
 } 
 
 export function createQuickReplyButtons(macros: any[]) {
-  if (macros.length === 0) return [];
+  let filteredMacros = macros.filter((macro) => macro.quick_access);
+  if (filteredMacros.length === 0) return [];
   
-  const buttons = macros.slice(0, 3).map((macro, index) => 
-    new ButtonBuilder()
-      .setCustomId(`quick_reply_${macro.name}`)
-      .setLabel(macro.name)
-      .setStyle(ButtonStyle.Primary)
-  );
+  const buttons = filteredMacros
+    .slice(0, 3)
+    .map((macro, index) =>
+      new ButtonBuilder()
+        .setCustomId(`quick_reply_${macro.name}`)
+        .setLabel(macro.name)
+        .setStyle(ButtonStyle.Primary)
+    );
   
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
   return [row];

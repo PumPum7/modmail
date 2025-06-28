@@ -113,5 +113,24 @@ export const actions: Actions = {
 				error: 'Failed to update thread urgency'
 			});
 		}
+	},
+
+	closeThread: async ({ params, locals: { user } }) => {
+		if (!user) {
+			return fail(401, { error: 'Authentication required' });
+		}
+		if (!user.isModerator) {
+			return fail(403, { error: 'Moderator access required' });
+		}
+		try {
+			await api.closeThread(parseInt(params.id), {
+				id: user.id,
+				tag: user.username
+			});
+			return { success: 'Thread closed successfully!' };
+		} catch (error) {
+			console.error('Failed to close thread:', error);
+			return fail(500, { error: 'Failed to close thread' });
+		}
 	}
 };

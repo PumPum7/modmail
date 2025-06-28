@@ -1,5 +1,6 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { api } from '$lib/api';
+import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ url }) => {
 	try {
@@ -25,5 +26,34 @@ export const load: PageServerLoad = async ({ url }) => {
 			},
 			error: 'Failed to load threads'
 		};
+	}
+};
+
+export const actions: Actions = {
+	closeThread: async ({ request, locals: { user } }) => {
+		if (!user) {
+			return fail(401, { error: 'Authentication required' });
+		}
+		if (!user.isModerator) {
+			return fail(403, { error: 'Moderator access required' });
+		}
+
+		const data = await request.formData();
+		const threadId = data.get('id')?.toString();
+
+		if (!threadId) {
+			return fail(400, { error: 'Thread ID is required' });
+		}
+
+		try {
+			await api.closeThread(parseInt(threadId), {
+				id: user.id,
+				tag: user.username
+			});
+			return { success: 'Thread closed successfully!' };
+		} catch (error) {
+			console.error('Failed to close thread:', error);
+			return fail(500, { error: 'Failed to close thread' });
+		}
 	}
 };

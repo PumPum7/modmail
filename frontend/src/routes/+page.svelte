@@ -5,6 +5,7 @@
 	import type { Thread } from '$lib/api';
 	import type { PageProps } from './$types';
 	import { api } from '$lib/api';
+	import { enhance } from '$app/forms';
 
 	let { data }: PageProps = $props();
 
@@ -41,25 +42,6 @@
 		} catch (err) {
 			error = 'Failed to refresh threads';
 			console.error(err);
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function closeThread(thread: Thread) {
-		try {
-			loading = true;
-			error = '';
-
-			await api.closeThread(thread.id, {
-				id: data.user?.id || '',
-				tag: data.user?.username || ''
-			});
-
-			await invalidateAll(); // Refresh server data
-		} catch (err) {
-			error = 'Failed to close thread';
-			console.error('Failed to close thread:', err);
 		} finally {
 			loading = false;
 		}
@@ -128,10 +110,21 @@
 							View Messages
 						</button>
 						{#if thread.is_open}
-							<button onclick={() => closeThread(thread)} class="close-btn" disabled={loading}>
-								<XCircle size={16} />
-								Close
-							</button>
+							<form method="POST" action="?/closeThread" use:enhance={() => {
+								loading = true;
+								return async ({ result }) => {
+									loading = false;
+									if (result.type === 'success') {
+										await invalidateAll();
+									}
+								};
+							}}>
+								<input type="hidden" name="id" value={thread.id} />
+								<button type="submit" class="close-btn" disabled={loading}>
+									<XCircle size={16} />
+									Close
+								</button>
+							</form>
 						{/if}
 					</div>
 				</div>

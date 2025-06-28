@@ -41,7 +41,6 @@
 			success = form.success as string;
 			error = '';
 			newNoteContent = '';
-			invalidateAll();
 		} else if (form?.error) {
 			error = form.error as string;
 			success = '';
@@ -64,30 +63,6 @@
 		}
 	});
 
-	async function closeThread() {
-		try {
-			loading = true;
-			error = '';
-
-			if (!data.thread) {
-				throw new Error('Thread not found');
-			}
-
-			await api.closeThread(data.thread.id, {
-				id: data.user?.id || '',
-				tag: data.user?.username || ''
-			});
-
-			success = 'Thread closed successfully!';
-			await invalidateAll(); // Refresh server data
-		} catch (err) {
-			error = 'Failed to close thread';
-			console.error('Error closing thread:', err);
-		} finally {
-			loading = false;
-		}
-	}
-
 	function formatUserId(userId: string) {
 		return `${userId.slice(0, 4)}...${userId.slice(-4)}`;
 	}
@@ -102,8 +77,6 @@
 		url.searchParams.set('page', pageNum.toString());
 		goto(url.pathname + url.search);
 	}
-
-
 
 	function getUrgencyColor(urgency: string) {
 		switch (urgency?.toLowerCase()) {
@@ -155,6 +128,7 @@
 								return async ({ result }) => {
 									if (result.type === 'success') {
 										editingUrgency = false;
+										await invalidateAll();
 									}
 									loading = false;
 								};
@@ -199,10 +173,21 @@
 		</div>
 		<div class="header-actions">
 			{#if data.thread?.is_open}
-				<button onclick={closeThread} class="close-btn" disabled={loading}>
-					<XCircle size={16} />
-					Close Thread
-				</button>
+				<form method="POST" action="?/closeThread" use:enhance={() => {
+					loading = true;
+					return async ({ result }) => {
+						loading = false;
+						if (result.type === 'success') {
+							await invalidateAll();
+						}
+					};
+				}}>
+					<input type="hidden" name="id" value={data.thread?.id} />
+					<button type="submit" class="close-btn" disabled={loading}>
+						<XCircle size={16} />
+						Close Thread
+					</button>
+				</form>
 			{/if}
 		</div>
 	</div>
@@ -383,8 +368,11 @@
 				<form method="POST" action="?/addNote" use:enhance={() => {
 					loading = true;
 					clearMessages();
-					return async ({ }) => {
+					return async ({ result }) => {
 						loading = false;
+						if (result.type === 'success') {
+							await invalidateAll();
+						}
 					};
 				}} class="note-form">
 					<div class="form-group">

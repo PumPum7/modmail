@@ -113,7 +113,10 @@
 				use:enhance={() => {
 					loading = true;
 					clearMessages();
-					return async ({}) => {
+					return async ({ result }) => {
+						if (result.type === 'success') {
+							await invalidateAll();
+						}
 						loading = false;
 					};
 				}}
@@ -211,7 +214,10 @@
 								use:enhance={() => {
 									loading = true;
 									clearMessages();
-									return async ({}) => {
+									return async ({ result }) => {
+										if (result.type === 'success') {
+											await invalidateAll();
+										}
 										loading = false;
 									};
 								}}

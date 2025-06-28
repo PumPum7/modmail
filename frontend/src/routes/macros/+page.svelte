@@ -4,7 +4,7 @@
 	import type { Macro } from '$lib/api';
 	import type { PageProps } from './$types';
 
-	let { data, form }: PageProps = $props();
+	let { data }: PageProps = $props();
 
 	let loading = $state(false);
 	let error = $state('');
@@ -18,29 +18,6 @@
 	let newMacroQuickAccess = $state(false);
 	let editMacroContent = $state('');
 	let editMacroQuickAccess = $state(false);
-
-	// Handle form results
-	$effect(() => {
-		if (form?.success) {
-			success = form.success;
-			error = '';
-			// Reset form state on success
-			if (success.includes('created')) {
-				newMacroName = '';
-				newMacroContent = '';
-				newMacroQuickAccess = false;
-				showCreateForm = false;
-			} else if (success.includes('updated')) {
-				editingMacro = null;
-				editMacroContent = '';
-				editMacroQuickAccess = false;
-			}
-		} else if (form?.error) {
-			error = form.error;
-			success = '';
-		}
-		loading = false;
-	});
 
 	function startEditing(macro: Macro) {
 		editingMacro = macro;
@@ -68,11 +45,6 @@
 	function clearMessages() {
 		error = '';
 		success = '';
-	}
-
-	function handleSubmit() {
-		loading = true;
-		clearMessages();
 	}
 </script>
 
@@ -119,6 +91,14 @@
 				clearMessages();
 				return async ({ result }) => {
 					loading = false;
+					if (result.type === 'success') {
+						await invalidateAll();
+						showCreateForm = false;
+						newMacroName = '';
+						newMacroContent = '';
+						newMacroQuickAccess = false;
+						success = 'Macro created successfully!';
+					}
 				};
 			}}>
 				<div class="form-group">
@@ -172,6 +152,13 @@
 				clearMessages();
 				return async ({ result }) => {
 					loading = false;
+					if (result.type === 'success') {
+						await invalidateAll();
+						editingMacro = null;
+						editMacroContent = '';
+						editMacroQuickAccess = false;
+						success = 'Macro updated successfully!';
+					}
 				};
 			}}>
 				<input type="hidden" name="name" value={editingMacro.name} />
@@ -238,6 +225,10 @@
 								clearMessages();
 								return async ({ result }) => {
 									loading = false;
+									if (result.type === 'success') {
+										await invalidateAll();
+										success = 'Macro deleted successfully!';
+									}
 								};
 							}}>
 								<input type="hidden" name="name" value={macro.name} />
