@@ -1,0 +1,215 @@
+@import '_variables'
+
+// Button mixins
+button-base() {
+  border: none;
+  border-radius: radius-md;
+  cursor: pointer;
+  font-weight: font-weight-medium;
+  transition: all transition-fast;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+button-size(padding-y = spacing-sm, padding-x = spacing-lg, font-size = font-size-md) {
+  padding: padding-y padding-x;
+  font-size: font-size;
+}
+
+button-variant(bg-color, hover-color, text-color = white) {
+  background: bg-color;
+  color: text-color;
+  
+  &:hover:not(:disabled) {
+    background: hover-color;
+  }
+}
+
+// Card mixins
+card-base() {
+  background: bg-white;
+  border: 1px solid border-light;
+  border-radius: radius-lg;
+  box-shadow: shadow-md;
+}
+
+card-hover() {
+  transition: all transition-fast;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: shadow-lg;
+  }
+}
+
+card-padding(padding = spacing-xl) {
+  padding: padding;
+}
+
+// Form mixins
+form-input() {
+  width: 100%;
+  padding: spacing-md;
+  border: 1px solid border-gray;
+  border-radius: radius-md;
+  font-size: font-size-md;
+  transition: border-color transition-fast, box-shadow transition-fast;
+  
+  &:focus {
+    outline: none;
+    border-color: primary;
+    box-shadow: 0 0 0 3px rgba(primary, 0.1);
+  }
+}
+
+form-label() {
+  display: block;
+  margin-bottom: spacing-sm;
+  font-weight: font-weight-medium;
+  color: text-primary;
+}
+
+// Layout mixins
+flex-center() {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+flex-between() {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+flex-column() {
+  display: flex;
+  flex-direction: column;
+}
+
+// Grid mixins
+grid-auto-fit(min-width = 300px, gap = spacing-xl) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min-width, 1fr));
+  gap: gap;
+}
+
+grid-auto-fill(min-width = 300px, gap = spacing-xl) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min-width, 1fr));
+  gap: gap;
+}
+
+// Text mixins
+text-truncate() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+text-clamp(lines = 3) {
+  display: -webkit-box;
+  -webkit-line-clamp: lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// Status badge mixin
+status-badge(bg-color, text-color) {
+  padding: spacing-xs spacing-md;
+  border-radius: radius-xl;
+  font-size: font-size-sm;
+  font-weight: font-weight-medium;
+  text-transform: uppercase;
+  background: bg-color;
+  color: text-color;
+}
+
+// Alert mixins
+alert-base() {
+  padding: spacing-lg;
+  border-radius: radius-lg;
+  margin-bottom: spacing-lg;
+  position: relative;
+  flex-between();
+}
+
+alert-variant(bg-color, text-color, border-color) {
+  background-color: bg-color;
+  color: text-color;
+  border: 1px solid border-color;
+}
+
+// Responsive mixins
+mobile() {
+  @media (max-width: breakpoint-md) {
+    {block}
+  }
+}
+
+tablet() {
+  @media (min-width: breakpoint-md) and (max-width: breakpoint-lg) {
+    {block}
+  }
+}
+
+desktop() {
+  @media (min-width: breakpoint-lg) {
+    {block}
+  }
+}
+
+// Animation mixins
+fade-in(duration = transition-normal) {
+  animation: fadeIn duration ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+slide-up(duration = transition-normal) {
+  animation: slideUp duration ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Utility mixins
+visually-hidden() {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+container(max-width = breakpoint-xl) {
+  max-width: max-width;
+  margin: 0 auto;
+  padding: 0 spacing-2xl;
+  
+  +mobile() {
+    padding: 0 spacing-lg;
+  }
+}

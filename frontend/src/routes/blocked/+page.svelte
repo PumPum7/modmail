@@ -237,339 +237,208 @@
 	</div>
 </div>
 
-<style>
-	.page {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 2rem;
-	}
+<style lang="stylus">
+	@import '../../styles/_variables.styl'
+	@import '../../styles/_mixins.styl'
 
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 2rem;
-		gap: 2rem;
-	}
+	.page
+		container()
+		+mobile()
+			padding spacing-lg
 
-	.header-left {
-		flex: 1;
-	}
+		& 
+			padding-top spacing-2xl
+			padding-bottom spacing-2xl
 
-	.back-btn {
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		margin-bottom: 1rem;
-		transition: background-color 0.2s;
-	}
+	.page-header
+		flex-between()
+		align-items flex-start
+		margin-bottom spacing-2xl
+		gap spacing-2xl
 
-	.back-btn:hover {
-		background: #4b5563;
-	}
+		+mobile()
+			flex-direction column
+			align-items stretch
 
-	.title-section h1 {
-		margin: 0 0 0.5rem 0;
-		color: #2c2f36;
-		font-size: 1.75rem;
-		font-weight: 600;
-	}
+	.header-left
+		flex 1
 
-	.title-section p {
-		margin: 0;
-		color: #666;
-		font-size: 0.9rem;
-	}
+	.back-btn
+		button-base()
+		button-size(spacing-sm, spacing-lg, font-size-base)
+		button-variant(secondary, secondary-hover)
+		margin-bottom spacing-lg
 
-	.header-actions {
-		display: flex;
-		gap: 1rem;
-	}
+	.title-section
+		h1
+			margin 0 0 spacing-sm 0
+			color text-primary
+			font-size font-size-3xl
+			font-weight font-weight-semibold
 
-	.block-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #ed4245;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+		p
+			margin 0
+			color text-secondary
+			font-size font-size-base
 
-	.block-btn:hover {
-		background: #c73e3e;
-	}
+	.header-actions
+		display flex
+		gap spacing-lg
 
-	.alert {
-		padding: 1rem;
-		border-radius: 0.5rem;
-		margin-bottom: 1rem;
-		position: relative;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
+	.block-btn
+		button-base()
+		button-size()
+		button-variant(danger, danger-hover)
+		gap spacing-sm
 
-	.alert-error {
-		background-color: #fee;
-		color: #c53030;
-		border: 1px solid #feb2b2;
-	}
+	.alert
+		alert-base()
 
-	.alert-success {
-		background-color: #f0fff4;
-		color: #2f855a;
-		border: 1px solid #9ae6b4;
-	}
+		&.alert-error
+			alert-variant(#fee, danger, #feb2b2)
 
-	.alert-close {
-		background: none;
-		border: none;
-		font-size: 1.2rem;
-		cursor: pointer;
-		padding: 0;
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+		&.alert-success
+			alert-variant(#f0fff4, success, #9ae6b4)
 
-	.block-form-section {
-		background: #fff5f5;
-		border: 1px solid #ed4245;
-		border-radius: 8px;
-		padding: 1.5rem;
-		margin-bottom: 2rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	}
+	.alert-close
+		background none
+		border none
+		font-size font-size-xl
+		cursor pointer
+		padding 0
+		width 24px
+		height 24px
+		flex-center()
 
-	.section-header {
-		margin-bottom: 1rem;
-	}
+	.block-form-section
+		background lighten(danger, 45%)
+		border 1px solid danger
+		border-radius radius-lg
+		padding spacing-xl
+		margin-bottom spacing-2xl
+		box-shadow shadow-sm
 
-	.section-header h2 {
-		margin: 0;
-		color: #374151;
-		font-size: 1.25rem;
-		font-weight: 600;
-	}
+	.section-header
+		margin-bottom spacing-lg
 
-	.block-form {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+		h2
+			margin 0
+			color text-primary
+			font-size font-size-xl
+			font-weight font-weight-semibold
 
-	.form-row {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1rem;
-	}
+	.block-form
+		flex-column()
+		gap spacing-lg
 
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
+	.form-row
+		display grid
+		grid-template-columns 1fr 1fr
+		gap spacing-lg
 
-	.form-group label {
-		font-weight: 500;
-		color: #374151;
-	}
+		+mobile()
+			grid-template-columns 1fr
 
-	.form-group input,
-	.form-group textarea {
-		padding: 0.75rem;
-		border: 1px solid #d1d5db;
-		border-radius: 0.375rem;
-		font-size: 1rem;
-	}
+	.form-group
+		flex-column()
+		gap spacing-sm
 
-	.form-group input:focus,
-	.form-group textarea:focus {
-		outline: none;
-		border-color: #ed4245;
-		box-shadow: 0 0 0 3px rgba(237, 66, 69, 0.1);
-	}
+		label
+			form-label()
 
-	.form-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 1rem;
-	}
+		input,
+		textarea
+			form-input()
 
-	.cancel-btn {
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+	.form-actions
+		display flex
+		justify-content flex-end
+		gap spacing-lg
 
-	.cancel-btn:hover {
-		background: #4b5563;
-	}
+	.cancel-btn
+		button-base()
+		button-size()
+		button-variant(secondary, secondary-hover)
 
-	.submit-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #ed4245;
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+	.submit-btn
+		button-base()
+		button-size()
+		button-variant(danger, danger-hover)
+		gap spacing-sm
 
-	.submit-btn:hover:not(:disabled) {
-		background: #c73e3e;
-	}
+	.content
+		display grid
+		gap spacing-2xl
 
-	.submit-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+	.empty-state
+		text-align center
+		padding spacing-3xl
 
-	.content {
-		display: grid;
-		gap: 2rem;
-	}
+		h3
+			margin spacing-lg 0 spacing-sm 0
+			color text-primary
+			font-size font-size-xl
 
-	.empty-state {
-		text-align: center;
-		padding: 3rem;
-		color: #666;
-	}
+		p
+			margin 0
+			color text-muted
 
-	.empty-state h3 {
-		margin: 1rem 0 0.5rem 0;
-		color: #374151;
-	}
+	.blocked-users-list
+		flex-column()
+		gap spacing-lg
 
-	.empty-state p {
-		margin: 0;
-		color: #999;
-	}
+	.blocked-user-card
+		card-base()
+		card-padding(spacing-xl)
+		border-left 4px solid danger
+		box-shadow shadow-sm
 
-	.blocked-users-list {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+	.user-header
+		flex-between()
+		align-items center
+		margin-bottom spacing-md
 
-	.blocked-user-card {
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		padding: 1.25rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-		border-left: 4px solid #ed4245;
-	}
+		+mobile()
+			flex-direction column
+			align-items flex-start
+			gap spacing-sm
 
-	.user-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.75rem;
-	}
+	.user-info
+		flex-center()
+		gap spacing-sm
+		color text-secondary
 
-	.user-info {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #666;
-	}
+	.user-tag
+		font-weight font-weight-semibold
+		color text-primary
 
-	.user-tag {
-		font-weight: 600;
-		color: #2c2f36;
-	}
+	.user-id
+		font-family font-family-mono
+		font-size font-size-sm
+		background bg-light
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
 
-	.user-id {
-		font-family: 'Monaco', 'Menlo', monospace;
-		font-size: 0.85rem;
-		background: #f5f5f5;
-		padding: 0.2rem 0.4rem;
-		border-radius: 4px;
-	}
-
-	.timestamp {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		color: #999;
-		font-size: 0.85rem;
-	}
+	.timestamp
+		flex-center()
+		gap spacing-xs
+		color text-muted
+		font-size font-size-sm
 
 	.reason,
-	.blocked-by {
-		margin-bottom: 0.5rem;
-		color: #2c2f36;
-		font-size: 0.9rem;
-	}
+	.blocked-by
+		margin-bottom spacing-sm
+		color text-primary
+		font-size font-size-base
 
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		margin-top: 1rem;
-	}
+	.actions
+		display flex
+		justify-content flex-end
+		margin-top spacing-lg
 
-	.unblock-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #28a745;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.unblock-btn:hover:not(:disabled) {
-		background: #218838;
-	}
-
-	.unblock-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	@media (max-width: 768px) {
-		.page {
-			padding: 1rem;
-		}
-
-		.page-header {
-			flex-direction: column;
-			align-items: stretch;
-		}
-
-		.form-row {
-			grid-template-columns: 1fr;
-		}
-
-		.user-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.5rem;
-		}
-	}
+	.unblock-btn
+		button-base()
+		button-size()
+		button-variant(success, success-hover)
+		gap spacing-sm
 </style>

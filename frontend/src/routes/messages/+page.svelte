@@ -146,194 +146,140 @@
 	{/if}
 </div>
 
-<style>
-	.page {
-		max-width: 1000px;
-		margin: 0 auto;
-	}
+<style lang="stylus">
+	@import '../../styles/_variables.styl'
+	@import '../../styles/_mixins.styl'
 
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 2rem;
-	}
+	.page
+		container()
 
-	.page-header h1 {
-		margin: 0;
-		color: #2c2f36;
-		font-size: 2rem;
-		font-weight: 600;
-	}
+	.page-header
+		flex-between()
+		margin-bottom spacing-2xl
 
-	.refresh-btn {
-		background: #5865f2;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+		h1
+			margin 0
+			color text-primary
+			font-size font-size-4xl
+			font-weight font-weight-semibold
 
-	.refresh-btn:hover {
-		background: #4752c4;
-	}
+		+mobile()
+			flex-direction column
+			gap spacing-lg
+			align-items stretch
 
-	.search-bar {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		padding: 0.75rem 1rem;
-		margin-bottom: 2rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	}
+	.refresh-btn
+		button-base()
+		button-size()
+		button-variant(primary, primary-hover)
 
-	.search-input {
-		flex: 1;
-		border: none;
-		outline: none;
-		font-size: 1rem;
-		background: transparent;
-	}
+	.search-bar
+		flex-center()
+		gap spacing-md
+		background bg-white
+		border 1px solid border-light
+		border-radius radius-lg
+		padding spacing-md spacing-lg
+		margin-bottom spacing-2xl
+		box-shadow shadow-sm
 
-	.search-input::placeholder {
-		color: #999;
-	}
+	.search-input
+		flex 1
+		border none
+		outline none
+		font-size font-size-lg
+		background transparent
+
+		&::placeholder
+			color text-muted
 
 	.loading,
-	.error {
-		text-align: center;
-		padding: 3rem;
-		color: #666;
-		font-size: 1.1rem;
-	}
+	.error
+		text-align center
+		padding spacing-3xl
+		color text-secondary
+		font-size font-size-lg
 
-	.error {
-		color: #ed4245;
-	}
+	.error
+		color danger
 
-	.empty-state {
-		text-align: center;
-		padding: 4rem 2rem;
-	}
+	.empty-state
+		text-align center
+		padding spacing-4xl spacing-2xl
 
-	.empty-state h3 {
-		margin: 1rem 0 0.5rem 0;
-		color: #666;
-		font-size: 1.25rem;
-	}
+		h3
+			margin spacing-lg 0 spacing-sm 0
+			color text-secondary
+			font-size font-size-xl
 
-	.empty-state p {
-		margin: 0;
-		color: #999;
-	}
+		p
+			margin 0
+			color text-muted
 
-	.list-header {
-		margin-bottom: 1rem;
-	}
+	.list-header
+		margin-bottom spacing-lg
 
-	.count-info {
-		color: #666;
-		font-size: 0.9rem;
-	}
+	.count-info
+		color text-secondary
+		font-size font-size-base
 
-	.messages-list {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+	.messages-list
+		flex-column()
+		gap spacing-lg
 
-	.message-card {
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		padding: 1.25rem;
-		transition: all 0.2s;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	}
+	.message-card
+		card-base()
+		card-hover()
+		card-padding(spacing-xl)
 
-	.message-card:hover {
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-		transform: translateY(-1px);
-	}
+	.message-header
+		flex-between()
+		align-items center
+		margin-bottom spacing-md
 
-	.message-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.75rem;
-	}
+		+mobile()
+			flex-direction column
+			align-items flex-start
+			gap spacing-sm
 
-	.author-info {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #666;
-	}
+	.author-info
+		flex-center()
+		gap spacing-sm
+		color text-secondary
 
-	.author-tag {
-		font-weight: 600;
-		color: #2c2f36;
-	}
+	.author-tag
+		font-weight font-weight-semibold
+		color text-primary
 
-	.author-id {
-		font-family: 'Monaco', 'Menlo', monospace;
-		font-size: 0.85rem;
-		background: #f5f5f5;
-		padding: 0.2rem 0.4rem;
-		border-radius: 4px;
-	}
+	.author-id
+		font-family font-family-mono
+		font-size font-size-sm
+		background bg-light
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
 
-	.timestamp {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		color: #999;
-		font-size: 0.85rem;
-	}
+	.timestamp
+		flex-center()
+		gap spacing-xs
+		color text-muted
+		font-size font-size-sm
 
-	.message-content {
-		margin-bottom: 0.75rem;
-		line-height: 1.5;
-		color: #2c2f36;
-		white-space: pre-wrap;
-		word-wrap: break-word;
-	}
+	.message-content
+		margin-bottom spacing-md
+		line-height line-height-normal
+		color text-primary
+		white-space pre-wrap
+		word-wrap break-word
 
-	.message-footer {
-		display: flex;
-		justify-content: flex-end;
-	}
+	.message-footer
+		display flex
+		justify-content flex-end
 
-	.message-id {
-		font-family: 'Monaco', 'Menlo', monospace;
-		font-size: 0.8rem;
-		color: #999;
-		background: #f8f9fa;
-		padding: 0.2rem 0.5rem;
-		border-radius: 4px;
-	}
-
-	@media (max-width: 768px) {
-		.page-header {
-			flex-direction: column;
-			gap: 1rem;
-			align-items: stretch;
-		}
-
-		.message-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.5rem;
-		}
-
-		.search-bar {
-			padding: 0.5rem 0.75rem;
-		}
-	}
+	.message-id
+		font-family font-family-mono
+		font-size font-size-xs
+		color text-muted
+		background bg-gray
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
 </style>

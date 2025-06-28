@@ -398,540 +398,343 @@
 	</div>
 </div>
 
-<style>
-	.page {
-		max-width: 1000px;
-		margin: 0 auto;
-		padding: 2rem;
-	}
+<style lang="stylus">
+	@import '../../../styles/_variables.styl'
+	@import '../../../styles/_mixins.styl'
 
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 2rem;
-		gap: 2rem;
-	}
+	.page
+		max-width 1000px
+		margin 0 auto
+		padding spacing-2xl
 
-	.header-left {
-		flex: 1;
-	}
+		+mobile()
+			padding spacing-lg
 
-	.back-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		margin-bottom: 1rem;
-		transition: background-color 0.2s;
-	}
+	.page-header
+		flex-between()
+		align-items flex-start
+		margin-bottom spacing-2xl
+		gap spacing-2xl
 
-	.back-btn:hover {
-		background: #4b5563;
-	}
+		+mobile()
+			flex-direction column
+			align-items stretch
 
-	.thread-info h1 {
-		margin: 0 0 0.5rem 0;
-		color: #2c2f36;
-		font-size: 1.75rem;
-		font-weight: 600;
-	}
+	.header-left
+		flex 1
 
-	.thread-meta {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		flex-wrap: wrap;
-	}
+	.back-btn
+		button-base()
+		button-size(spacing-sm, spacing-lg, font-size-base)
+		button-variant(secondary, secondary-hover)
+		gap spacing-sm
+		margin-bottom spacing-lg
 
-	.meta-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #666;
-		font-size: 0.9rem;
-	}
+	.thread-info h1
+		margin 0 0 spacing-sm 0
+		color text-primary
+		font-size font-size-3xl
+		font-weight font-weight-semibold
 
-	.thread-status {
-		padding: 0.25rem 0.75rem;
-		border-radius: 12px;
-		font-size: 0.85rem;
-		font-weight: 500;
-		text-transform: uppercase;
-	}
+	.thread-meta
+		display flex
+		align-items center
+		gap spacing-xl
+		flex-wrap wrap
 
-	.thread-status.open {
-		background: #d4edda;
-		color: #155724;
-	}
+		+mobile()
+			flex-direction column
+			align-items flex-start
+			gap spacing-sm
 
-	.thread-status.closed {
-		background: #f8d7da;
-		color: #721c24;
-	}
+	.meta-item
+		flex-center()
+		gap spacing-sm
+		color text-secondary
+		font-size font-size-base
 
-	.header-actions {
-		display: flex;
-		gap: 1rem;
-	}
+	.thread-status
+		status-badge(transparent, inherit)
 
-	.close-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #ed4245;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+		&.open
+			status-badge(#d4edda, #155724)
 
-	.close-btn:hover:not(:disabled) {
-		background: #c73e3e;
-	}
+		&.closed
+			status-badge(#f8d7da, #721c24)
 
-	.close-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+	.close-btn
+		button-base()
+		button-size()
+		button-variant(danger, danger-hover)
+		gap spacing-sm
 
-	.alert {
-		padding: 1rem;
-		border-radius: 0.5rem;
-		margin-bottom: 1rem;
-		position: relative;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
+	.alert
+		alert-base()
 
-	.alert-error {
-		background-color: #fee;
-		color: #c53030;
-		border: 1px solid #feb2b2;
-	}
+		&.alert-error
+			alert-variant(#fee, #c53030, #feb2b2)
 
-	.alert-success {
-		background-color: #f0fff4;
-		color: #2f855a;
-		border: 1px solid #9ae6b4;
-	}
+		&.alert-success
+			alert-variant(#f0fff4, #2f855a, #9ae6b4)
 
-	.alert-close {
-		background: none;
-		border: none;
-		font-size: 1.2rem;
-		cursor: pointer;
-		padding: 0;
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+	.alert-close
+		background none
+		border none
+		font-size font-size-xl
+		cursor pointer
+		padding 0
+		width 24px
+		height 24px
+		flex-center()
 
-	.content {
-		display: grid;
-		gap: 2rem;
-	}
+	.content
+		flex-column()
+		gap spacing-2xl
 
-	.section-header {
-		margin-bottom: 1rem;
-	}
+	.section-header
+		margin-bottom spacing-lg
 
-	.section-header h2 {
-		margin: 0;
-		color: #374151;
-		font-size: 1.25rem;
-		font-weight: 600;
-	}
+		h2
+			margin 0
+			color text-primary
+			font-size font-size-xl
+			font-weight font-weight-semibold
 
-	.empty-state {
-		text-align: center;
-		padding: 3rem;
-		color: #666;
-	}
+	.empty-state
+		text-align center
+		padding spacing-3xl
+		color text-secondary
 
-	.empty-state h3 {
-		margin: 1rem 0 0.5rem 0;
-		color: #374151;
-	}
+		h3
+			margin spacing-lg 0 spacing-sm 0
+			color text-primary
 
-	.empty-state p {
-		margin: 0;
-		color: #999;
-	}
+		p
+			margin 0
+			color text-muted
 
 	.messages-list,
-	.notes-list {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+	.notes-list
+		flex-column()
+		gap spacing-lg
 
 	.message-card,
-	.note-card {
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 8px;
-		padding: 1.25rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	}
+	.note-card
+		card-base()
+		card-padding()
 
-	.note-card {
-		background: #fffbf0;
-		border-color: #f59e0b;
-		border-left: 4px solid #f59e0b;
-	}
+	.note-card
+		background bg-warning-light
+		border-color warning
+		border-left 4px solid warning
 
 	.message-header,
-	.note-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 0.75rem;
-	}
+	.note-header
+		+mobile()
+			flex-direction column
+			align-items flex-start
+			gap spacing-sm
 
-	.author-info {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #666;
-	}
+		flex-between()
+		& 
+			margin-bottom spacing-md
 
-	.author-tag {
-		font-weight: 600;
-		color: #2c2f36;
-	}
+	.author-info
+		flex-center()
+		gap spacing-sm
+		color text-secondary
 
-	.author-id {
-		font-family: 'Monaco', 'Menlo', monospace;
-		font-size: 0.85rem;
-		background: #f5f5f5;
-		padding: 0.2rem 0.4rem;
-		border-radius: 4px;
-	}
+	.author-tag
+		font-weight font-weight-semibold
+		color text-primary
 
-	.timestamp {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		color: #999;
-		font-size: 0.85rem;
-	}
+	.author-id
+		font-family font-family-mono
+		font-size font-size-sm
+		background bg-light
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
+
+	.timestamp
+		flex-center()
+		gap spacing-xs
+		color text-muted
+		font-size font-size-sm
 
 	.message-content,
-	.note-content {
-		margin-bottom: 0.75rem;
-		line-height: 1.5;
-		color: #2c2f36;
-		white-space: pre-wrap;
-		word-wrap: break-word;
-	}
+	.note-content
+		margin-bottom spacing-md
+		line-height line-height-normal
+		color text-primary
+		white-space pre-wrap
+		word-wrap break-word
 
-	.message-footer {
-		display: flex;
-		justify-content: flex-end;
-	}
+	.message-footer
+		display flex
+		justify-content flex-end
 
 	.message-id,
-	.note-id {
-		font-family: 'Monaco', 'Menlo', monospace;
-		font-size: 0.8rem;
-		color: #999;
-		background: #f8f9fa;
-		padding: 0.2rem 0.5rem;
-		border-radius: 4px;
-	}
+	.note-id
+		font-family font-family-mono
+		font-size font-size-xs
+		color text-muted
+		background bg-gray
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
 
-	.add-note-section {
-		background: #fffbf0;
-		border: 1px solid #f59e0b;
-		border-radius: 8px;
-		padding: 1.5rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	}
+	.add-note-section
+		background bg-warning-light
+		border 1px solid warning
+		border-radius radius-lg
+		padding spacing-xl
+		box-shadow shadow-md
 
-	.note-form {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+	.note-form
+		flex-column()
+		gap spacing-lg
 
-	.form-group {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
+	.form-group
+		flex-column()
+		gap spacing-sm
 
-	.form-group label {
-		font-weight: 500;
-		color: #374151;
-	}
+		label
+			form-label()
 
-	.form-group textarea {
-		padding: 0.75rem;
-		border: 1px solid #d1d5db;
-		border-radius: 0.375rem;
-		font-size: 1rem;
-	}
+		textarea
+			form-input()
 
-	.form-group textarea:focus {
-		outline: none;
-		border-color: #f59e0b;
-		box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
-	}
+	.form-actions
+		display flex
+		justify-content flex-end
 
-	.form-actions {
-		display: flex;
-		justify-content: flex-end;
-	}
+	.send-btn
+		button-base()
+		button-size(spacing-md, spacing-xl)
+		button-variant(warning, warning-hover)
+		gap spacing-sm
 
-	.send-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #f59e0b;
-		color: white;
-		border: none;
-		padding: 0.75rem 1.5rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+	// Pagination styles (reused from main page)
+	.pagination
+		margin-top spacing-2xl
+		flex-column()
+		gap spacing-lg
+		align-items center
 
-	.send-btn:hover:not(:disabled) {
-		background: #d97706;
-	}
+	.pagination-info
+		color text-secondary
+		font-size font-size-base
 
-	.send-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+	.pagination-controls
+		display flex
+		gap spacing-sm
+		align-items center
 
-	.pagination {
-		margin-top: 2rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		align-items: center;
-	}
+		+mobile()
+			flex-wrap wrap
+			justify-content center
 
-	.pagination-info {
-		color: #666;
-		font-size: 0.9rem;
-	}
+	.pagination-btn
+		button-base()
+		button-size(spacing-sm, spacing-md, font-size-base)
+		button-variant(bg-white, bg-light, text-primary)
+		border 1px solid border-light
+		gap spacing-xs
 
-	.pagination-controls {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
+		&:hover:not(:disabled)
+			border-color text-light
 
-	.pagination-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		background: white;
-		border: 1px solid #e0e0e0;
-		padding: 0.5rem 0.75rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		transition: all 0.2s;
-	}
+		&:disabled
+			opacity 0.5
+			cursor not-allowed
 
-	.pagination-btn:hover:not(:disabled) {
-		background: #f5f5f5;
-		border-color: #ccc;
-	}
+		&.page-btn.active
+			button-variant(primary, primary-hover)
 
-	.pagination-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+	// Attachment styles
+	.attachments
+		margin spacing-md 0
+		padding spacing-md
+		background bg-gray
+		border-radius radius-md
+		border 1px solid border-muted
 
-	.page-btn.active {
-		background: #5865f2;
-		color: white;
-		border-color: #5865f2;
-	}
+		h4
+			margin 0 0 spacing-sm 0
+			font-size font-size-base
+			color text-primary
+			font-weight font-weight-semibold
 
-	.page-btn.active:hover {
-		background: #4752c4;
-		border-color: #4752c4;
-	}
+	.attachment-list
+		flex-column()
+		gap spacing-sm
 
-	@media (max-width: 768px) {
-		.page {
-			padding: 1rem;
-		}
+	.attachment-item
+		flex-column()
+		gap spacing-xs
 
-		.page-header {
-			flex-direction: column;
-			align-items: stretch;
-		}
+	.attachment-image
+		max-width 300px
+		max-height 200px
+		border-radius radius-sm
+		border 1px solid border-muted
 
-		.thread-meta {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.5rem;
-		}
+	.attachment-link
+		color primary
+		text-decoration none
+		font-weight font-weight-medium
 
-		.message-header,
-		.note-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.5rem;
-		}
+		&:hover
+			text-decoration underline
 
-		.pagination-controls {
-			flex-wrap: wrap;
-			justify-content: center;
-		}
-	}
+	.attachment-info
+		display flex
+		gap spacing-sm
+		font-size font-size-sm
+		color text-secondary
 
-	.attachments {
-		margin: 0.75rem 0;
-		padding: 0.75rem;
-		background: #f8f9fa;
-		border-radius: 6px;
-		border: 1px solid #e9ecef;
-	}
+	.filename
+		font-weight font-weight-medium
 
-	.attachments h4 {
-		margin: 0 0 0.5rem 0;
-		font-size: 0.9rem;
-		color: #495057;
-		font-weight: 600;
-	}
+	.filesize
+		color text-muted
 
-	.attachment-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
+	// Urgency editing styles
+	.urgency-item
+		flex-center()
+		gap spacing-sm
 
-	.attachment-item {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
+	.urgency-badge
+		status-badge(transparent, inherit)
+		text-transform capitalize
+		border 1px solid currentColor
 
-	.attachment-image {
-		max-width: 300px;
-		max-height: 200px;
-		border-radius: 4px;
-		border: 1px solid #dee2e6;
-	}
+	.urgency-edit-btn
+		background none
+		border 1px solid border-gray
+		color text-secondary
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
+		cursor pointer
+		font-size font-size-xs
+		transition all transition-fast
 
-	.attachment-link {
-		color: #0066cc;
-		text-decoration: none;
-		font-weight: 500;
-	}
+		&:hover
+			background bg-light
+			border-color text-muted
 
-	.attachment-link:hover {
-		text-decoration: underline;
-	}
+	.urgency-select
+		padding spacing-xs spacing-sm
+		border 1px solid border-gray
+		border-radius radius-sm
+		font-size font-size-sm
 
-	.attachment-info {
-		display: flex;
-		gap: 0.5rem;
-		font-size: 0.85rem;
-		color: #6c757d;
-	}
+	.urgency-save-btn
+		button-base()
+		button-size(spacing-xs, spacing-md, font-size-xs)
+		button-variant(success, success-hover)
 
-	.filename {
-		font-weight: 500;
-	}
-
-	.filesize {
-		color: #adb5bd;
-	}
-
-	.urgency-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.urgency-badge {
-		padding: 0.25rem 0.75rem;
-		border-radius: 12px;
-		font-size: 0.85rem;
-		font-weight: 500;
-		text-transform: capitalize;
-		border: 1px solid currentColor;
-	}
-
-	.urgency-edit-btn {
-		background: none;
-		border: 1px solid #d1d5db;
-		color: #6b7280;
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.8rem;
-		transition: all 0.2s;
-	}
-
-	.urgency-edit-btn:hover {
-		background: #f3f4f6;
-		border-color: #9ca3af;
-	}
-
-	.urgency-select {
-		padding: 0.25rem 0.5rem;
-		border: 1px solid #d1d5db;
-		border-radius: 4px;
-		font-size: 0.85rem;
-	}
-
-	.urgency-save-btn {
-		background: #10b981;
-		color: white;
-		border: none;
-		padding: 0.25rem 0.75rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.8rem;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.urgency-save-btn:hover:not(:disabled) {
-		background: #059669;
-	}
-
-	.urgency-save-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.urgency-cancel-btn {
-		background: #6b7280;
-		color: white;
-		border: none;
-		padding: 0.25rem 0.75rem;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.8rem;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
-
-	.urgency-cancel-btn:hover {
-		background: #4b5563;
-	}
+	.urgency-cancel-btn
+		button-base()
+		button-size(spacing-xs, spacing-md, font-size-xs)
+		button-variant(secondary, secondary-hover)
 </style>

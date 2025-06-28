@@ -51,8 +51,8 @@ The system consists of three main components:
    ```bash
    cd discord
    bun install
-   bun run deploy-commands.ts
-   bun run index.ts
+   bun run deploy
+   bun run start
    ```
 
 4. **Frontend**:
@@ -87,7 +87,6 @@ This starts all services with proper networking and database connections.
 - **Message History**: Complete conversation logs accessible via web dashboard
 - **Macro System**: Predefined responses for common inquiries
 - **Role-based Access**: Discord role integration for moderator permissions
-- **Real-time Updates**: Live message relay between Discord and web interface
 
 ## Technology Stack
 

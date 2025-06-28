@@ -251,279 +251,171 @@
 	{/if}
 </div>
 
-<style>
-	.container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 2rem;
-	}
+<style lang="stylus">
+	@import '../../styles/_variables.styl'
+	@import '../../styles/_mixins.styl'
 
-	header {
-		margin-bottom: 2rem;
-	}
+	.container
+		padding-top spacing-2xl
+		padding-bottom spacing-2xl
+		container()
 
-	header h1 {
-		margin: 0 0 0.5rem 0;
-		color: #333;
-	}
+		+mobile()
+			padding spacing-lg
 
-	header p {
-		margin: 0;
-		color: #666;
-		font-size: 1.1rem;
-	}
+	header
+		margin-bottom spacing-2xl
 
-	.alert {
-		padding: 1rem;
-		border-radius: 0.5rem;
-		margin-bottom: 1rem;
-		position: relative;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
+		h1
+			margin 0 0 spacing-sm 0
+			color text-primary
 
-	.alert-error {
-		background-color: #fee;
-		color: #c53030;
-		border: 1px solid #feb2b2;
-	}
+		p
+			margin 0
+			color text-secondary
+			font-size font-size-lg
 
-	.alert-success {
-		background-color: #f0fff4;
-		color: #2f855a;
-		border: 1px solid #9ae6b4;
-	}
+	.alert
+		alert-base()
 
-	.alert-close {
-		background: none;
-		border: none;
-		font-size: 1.2rem;
-		cursor: pointer;
-		padding: 0;
-		width: 24px;
-		height: 24px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+		&.alert-error
+			alert-variant(#fee, #c53030, #feb2b2)
 
-	.actions {
-		display: flex;
-		gap: 1rem;
-		margin-bottom: 2rem;
-	}
+		&.alert-success
+			alert-variant(#f0fff4, #2f855a, #9ae6b4)
 
-	.btn {
-		padding: 0.75rem 1.5rem;
-		border: none;
-		border-radius: 0.5rem;
-		cursor: pointer;
-		font-size: 1rem;
-		transition: all 0.2s;
-	}
+	.alert-close
+		background none
+		border none
+		font-size font-size-xl
+		cursor pointer
+		padding 0
+		width 24px
+		height 24px
+		flex-center()
 
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
+	.actions
+		display flex
+		gap spacing-lg
+		margin-bottom spacing-2xl
 
-	.btn-primary {
-		background-color: #4f46e5;
-		color: white;
-	}
+		+mobile()
+			flex-direction column
 
-	.btn-primary:hover:not(:disabled) {
-		background-color: #4338ca;
-	}
+	.btn
+		button-base()
+		button-size(spacing-md, spacing-xl)
 
-	.btn-secondary {
-		background-color: #6b7280;
-		color: white;
-	}
+		&.btn-primary
+			button-variant(primary, primary-hover)
 
-	.btn-secondary:hover:not(:disabled) {
-		background-color: #4b5563;
-	}
+		&.btn-secondary
+			button-variant(secondary, secondary-hover)
 
-	.btn-danger {
-		background-color: #dc2626;
-		color: white;
-	}
+		&.btn-danger
+			button-variant(danger, danger-hover)
 
-	.btn-danger:hover:not(:disabled) {
-		background-color: #b91c1c;
-	}
+		&.btn-small
+			button-size(spacing-sm, spacing-lg, font-size-sm)
 
-	.btn-small {
-		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
-	}
+	.form-card
+		card-base()
+		card-padding(spacing-2xl)
+		margin-bottom spacing-2xl
 
-	.form-card {
-		background: white;
-		border: 1px solid #e5e7eb;
-		border-radius: 0.5rem;
-		padding: 2rem;
-		margin-bottom: 2rem;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	}
+		h3
+			margin 0 0 spacing-xl 0
+			color text-primary
 
-	.form-card h3 {
-		margin: 0 0 1.5rem 0;
-		color: #333;
-	}
+	.form-group
+		margin-bottom spacing-xl
 
-	.form-group {
-		margin-bottom: 1.5rem;
-	}
+		label
+			form-label()
 
-	.form-group label {
-		display: block;
-		margin-bottom: 0.5rem;
-		font-weight: 500;
-		color: #374151;
-	}
+		input,
+		textarea
+			form-input()
 
-	.form-group input,
-	.form-group textarea {
-		width: 100%;
-		padding: 0.75rem;
-		border: 1px solid #d1d5db;
-		border-radius: 0.375rem;
-		font-size: 1rem;
-	}
+	.form-actions
+		display flex
+		gap spacing-lg
 
-	.form-group input:focus,
-	.form-group textarea:focus {
-		outline: none;
-		border-color: #4f46e5;
-		box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-	}
+		+mobile()
+			flex-direction column
 
-	.form-actions {
-		display: flex;
-		gap: 1rem;
-	}
+	.loading
+		text-align center
+		padding spacing-2xl
+		color text-secondary
+		font-size font-size-lg
 
-	.loading {
-		text-align: center;
-		padding: 2rem;
-		color: #666;
-		font-size: 1.1rem;
-	}
+	.empty-state
+		text-align center
+		padding spacing-3xl
+		color text-secondary
 
-	.empty-state {
-		text-align: center;
-		padding: 3rem;
-		color: #666;
-	}
+		h3
+			margin 0 0 spacing-lg 0
+			color text-primary
 
-	.empty-state h3 {
-		margin: 0 0 1rem 0;
-		color: #374151;
-	}
+	.macros-grid
+		grid-auto-fill(400px, spacing-xl)
 
-	.macros-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-		gap: 1.5rem;
-	}
+		+mobile()
+			grid-template-columns 1fr
 
-	.macro-card {
-		background: white;
-		border: 1px solid #e5e7eb;
-		border-radius: 0.5rem;
-		padding: 1.5rem;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-		transition:
-			transform 0.2s,
-			box-shadow 0.2s;
-	}
+	.macro-card
+		card-base()
+		card-hover()
+		card-padding()
 
-	.macro-card:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	}
+	.macro-header
+		flex-between()
+		align-items flex-start
+		margin-bottom spacing-lg
 
-	.macro-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		margin-bottom: 1rem;
-	}
+		h4
+			margin 0
+			color text-primary
+			flex 1
 
-	.macro-header h4 {
-		margin: 0;
-		color: #374151;
-		flex: 1;
-	}
+		+mobile()
+			flex-direction column
+			gap spacing-lg
 
-	.macro-actions {
-		display: flex;
-		gap: 0.5rem;
-	}
+	.macro-actions
+		display flex
+		gap spacing-sm
 
-	.macro-content {
-		color: #666;
-		line-height: 1.5;
-		white-space: pre-wrap;
-		background: #f9fafb;
-		padding: 1rem;
-		border-radius: 0.375rem;
-		border: 1px solid #e5e7eb;
-	}
+		+mobile()
+			align-self stretch
 
-	.checkbox-label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-weight: normal;
-		cursor: pointer;
-	}
+			.btn-small
+				flex 1
 
-	.checkbox-label input[type="checkbox"] {
-		width: auto;
-		margin: 0;
-	}
+	.macro-content
+		color text-secondary
+		line-height line-height-normal
+		white-space pre-wrap
+		background bg-gray
+		padding spacing-lg
+		border-radius radius-md
+		border 1px solid border-light
 
-	.quick-access-badge {
-		background: #4f46e5;
-		color: white;
-		font-size: 0.75rem;
-		padding: 0.25rem 0.5rem;
-		border-radius: 0.25rem;
-		margin-left: 0.5rem;
-	}
+	.checkbox-label
+		display flex
+		align-items center
+		gap spacing-sm
+		font-weight font-weight-normal
+		cursor pointer
 
-	@media (max-width: 768px) {
-		.container {
-			padding: 1rem;
-		}
+		input[type="checkbox"]
+			width auto
+			margin 0
 
-		.macros-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.actions {
-			flex-direction: column;
-		}
-
-		.form-actions {
-			flex-direction: column;
-		}
-
-		.macro-header {
-			flex-direction: column;
-			gap: 1rem;
-		}
-
-		.macro-actions {
-			align-self: stretch;
-		}
-
-		.btn-small {
-			flex: 1;
-		}
-	}
+	.quick-access-badge
+		status-badge(primary, white)
+		font-size font-size-xs
+		margin-left spacing-sm
 </style>

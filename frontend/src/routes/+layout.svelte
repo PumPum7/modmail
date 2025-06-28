@@ -48,145 +48,109 @@
 	</main>
 </div>
 
-<style>
-	:global(body) {
-		font-family: 'Inter', sans-serif;
-	}
+<style lang="stylus">
+	@import '../styles/_variables.styl'
+	@import '../styles/_mixins.styl'
 
-	.app {
-		min-height: 100vh;
-		background: #f8f9fa;
-	}
+	:global(body)
+		font-family font-family-base
 
-	.navbar {
-		background: white;
-		border-bottom: 1px solid #e0e0e0;
-		position: sticky;
-		top: 0;
-		z-index: 100;
-	}
+	.app
+		min-height 100vh
+		background bg-primary
 
-	.nav-container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 2rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		height: 4rem;
-	}
+	.navbar
+		background bg-white
+		border-bottom 1px solid border-light
+		position sticky
+		top 0
+		z-index z-navbar
 
-	.nav-brand .brand-link {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: #2c2f36;
-		text-decoration: none;
-	}
+	.nav-container
+		height 4rem
+		container()
+		flex-between()
 
-	.mobile-menu-btn {
-		display: none;
-		flex-direction: column;
-		background: none;
-		border: none;
-		cursor: pointer;
-		padding: 0.5rem;
-		gap: 0.25rem;
-	}
+	.nav-brand .brand-link
+		font-size font-size-xl
+		font-weight font-weight-semibold
+		color text-primary
+		text-decoration none
 
-	.mobile-menu-btn span {
-		width: 1.5rem;
-		height: 2px;
-		background: #2c2f36;
-		transition: all 0.3s;
-	}
+	.mobile-menu-btn
+		display none
+		flex-direction column
+		background none
+		border none
+		cursor pointer
+		padding spacing-sm
+		gap spacing-xs
 
-	.nav-menu {
-		display: flex;
-		align-items: center;
-		gap: 2rem;
-	}
+		span
+			width 1.5rem
+			height 2px
+			background text-primary
+			transition all transition-normal
 
-	.nav-link {
-		color: #666;
-		text-decoration: none;
-		font-weight: 500;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		transition: all 0.2s;
-	}
+		+mobile()
+			display flex
 
-	.nav-link:hover,
-	.nav-link.active {
-		color: #5865f2;
-		background: #f0f0ff;
-	}
+	.nav-menu
+		flex-center()
+		gap spacing-2xl
 
-	.logout-form {
-		margin: 0;
-	}
+		+mobile()
+			position absolute
+			top 100%
+			left 0
+			right 0
+			background bg-white
+			border-bottom 1px solid border-light
+			flex-direction column
+			align-items stretch
+			gap 0
+			padding spacing-lg
+			transform translateY(-100%)
+			opacity 0
+			visibility hidden
+			transition all transition-normal
 
-	.logout-btn {
-		background: #ed4245;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+			&.active
+				transform translateY(0)
+				opacity 1
+				visibility visible
 
-	.logout-btn:hover {
-		background: #c73e3e;
-	}
+	.nav-link
+		color text-secondary
+		text-decoration none
+		font-weight font-weight-medium
+		padding spacing-sm spacing-lg
+		border-radius radius-md
+		transition all transition-fast
 
-	.main-content {
-		padding: 2rem;
-	}
+		&:hover,
+		&.active
+			color primary
+			background rgba(primary, 0.1)
 
-	.main-content.with-nav {
-		padding-top: 2rem;
-	}
+		+mobile()
+			padding spacing-md spacing-lg
+			border-radius radius-md
 
-	@media (max-width: 768px) {
-		.nav-container {
-			padding: 0 1rem;
-		}
+	.logout-form
+		margin 0
 
-		.mobile-menu-btn {
-			display: flex;
-		}
+	.logout-btn
+		button-base()
+		button-size(spacing-sm, spacing-lg)
+		button-variant(danger, danger-hover)
 
-		.nav-menu {
-			position: absolute;
-			top: 100%;
-			left: 0;
-			right: 0;
-			background: white;
-			border-bottom: 1px solid #e0e0e0;
-			flex-direction: column;
-			align-items: stretch;
-			gap: 0;
-			padding: 1rem;
-			transform: translateY(-100%);
-			opacity: 0;
-			visibility: hidden;
-			transition: all 0.3s;
-		}
+	.main-content
+		padding spacing-2xl
 
-		.nav-menu.active {
-			transform: translateY(0);
-			opacity: 1;
-			visibility: visible;
-		}
+		&.with-nav
+			padding-top spacing-2xl
 
-		.nav-link {
-			padding: 0.75rem 1rem;
-			border-radius: 6px;
-		}
-
-		.main-content {
-			padding: 1rem;
-		}
-	}
+		+mobile()
+			padding spacing-lg
 </style>

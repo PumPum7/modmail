@@ -42,82 +42,61 @@
 	</div>
 </div>
 
-<style>
-	.login-container {
-		min-height: 100vh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-		padding: 2rem;
-	}
+<style lang="stylus">
+	@import '../../styles/_variables.styl'
+	@import '../../styles/_mixins.styl'
 
-	.login-card {
-		background: white;
-		border-radius: 12px;
-		box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-		max-width: 400px;
-		width: 100%;
-		overflow: hidden;
-	}
+	.login-container
+		min-height 100vh
+		flex-center()
+		background linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+		padding spacing-2xl
 
-	.logo {
-		background: #2c2f36;
-		color: white;
-		padding: 2rem;
-		text-align: center;
-	}
+	.login-card
+		background bg-white
+		border-radius radius-xl
+		box-shadow shadow-2xl
+		max-width 400px
+		width 100%
+		overflow hidden
 
-	.logo h1 {
-		margin: 0 0 0.5rem 0;
-		font-size: 1.5rem;
-		font-weight: 600;
-	}
+	.logo
+		background text-primary
+		color white
+		padding spacing-2xl
+		text-align center
 
-	.logo p {
-		margin: 0;
-		opacity: 0.8;
-		font-size: 0.9rem;
-	}
+		h1
+			margin 0 0 spacing-sm 0
+			font-size font-size-2xl
+			font-weight font-weight-semibold
 
-	.login-content {
-		padding: 2rem;
-		text-align: center;
-	}
+		p
+			margin 0
+			opacity 0.8
+			font-size font-size-base
 
-	.login-content h2 {
-		margin: 0 0 1rem 0;
-		color: #2c2f36;
-		font-size: 1.25rem;
-	}
+	.login-content
+		padding spacing-2xl
+		text-align center
 
-	.login-content p {
-		margin: 0 0 2rem 0;
-		color: #666;
-		line-height: 1.5;
-	}
+		h2
+			margin 0 0 spacing-lg 0
+			color text-primary
+			font-size font-size-xl
 
-	.discord-login-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.75rem;
-		background: #5865f2;
-		color: white;
-		border: none;
-		padding: 0.75rem 2rem;
-		border-radius: 8px;
-		font-size: 1rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: background-color 0.2s;
-		text-decoration: none;
-	}
+		p
+			margin 0 0 spacing-2xl 0
+			color text-secondary
+			line-height line-height-normal
 
-	.discord-login-btn:hover {
-		background: #4752c4;
-	}
+	.discord-login-btn
+		button-base()
+		button-size(spacing-md, spacing-2xl)
+		button-variant(primary, primary-hover)
+		gap spacing-md
+		text-decoration none
 
-	.discord-login-btn:active {
-		transform: translateY(1px);
-	}
+		&:active
+			transform translateY(1px)
 </style>

@@ -177,257 +177,158 @@
 	{/if}
 </div>
 
-<style>
-	.page {
-		max-width: 1200px;
-		margin: 0 auto;
-	}
+<style lang="stylus">
+	@import '../styles/_variables.styl'
+	@import '../styles/_mixins.styl'
 
-	.page-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 2rem;
-	}
+	.page
+		container()
 
-	.page-header h1 {
-		margin: 0;
-		color: #2c2f36;
-		font-size: 2rem;
-		font-weight: 600;
-	}
+	.page-header
+		flex-between()
+		margin-bottom spacing-2xl
 
-	.refresh-btn {
-		background: #5865f2;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+		h1
+			margin 0
+			color text-primary
+			font-size font-size-4xl
+			font-weight font-weight-semibold
 
-	.refresh-btn:hover {
-		background: #4752c4;
-	}
+		+mobile()
+			flex-direction column
+			gap spacing-lg
+			align-items stretch
+
+	.refresh-btn
+		button-base()
+		button-size()
+		button-variant(primary, primary-hover)
 
 	.loading,
-	.error {
-		text-align: center;
-		padding: 3rem;
-		color: #666;
-		font-size: 1.1rem;
-	}
+	.error
+		text-align center
+		padding spacing-3xl
+		color text-secondary
+		font-size font-size-lg
 
-	.error {
-		color: #ed4245;
-	}
+	.error
+		color danger
 
-	.empty-state {
-		text-align: center;
-		padding: 4rem 2rem;
-	}
+	.empty-state
+		text-align center
+		padding spacing-4xl spacing-2xl
 
-	.empty-state h3 {
-		margin: 1rem 0 0.5rem 0;
-		color: #666;
-		font-size: 1.25rem;
-	}
+		h3
+			margin spacing-lg 0 spacing-sm 0
+			color text-secondary
+			font-size font-size-xl
 
-	.empty-state p {
-		margin: 0;
-		color: #999;
-	}
+		p
+			margin 0
+			color text-muted
 
-	.threads-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-		gap: 1.5rem;
-	}
+	.threads-grid
+		grid-auto-fill(350px, spacing-xl)
 
-	.thread-card {
-		background: white;
-		border: 1px solid #e0e0e0;
-		border-radius: 12px;
-		padding: 1.5rem;
-		transition: all 0.2s;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-	}
+		+mobile()
+			grid-template-columns 1fr
 
-	.thread-card:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	}
+	.thread-card
+		card-base()
+		card-hover()
+		card-padding()
 
-	.thread-card.closed {
-		opacity: 0.7;
-		border-color: #ccc;
-	}
+		&.closed
+			opacity 0.7
+			border-color text-light
 
-	.thread-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1rem;
-	}
+	.thread-header
+		flex-between()
+		margin-bottom spacing-lg
 
-	.thread-info {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #666;
-	}
+	.thread-info
+		flex-center()
+		gap spacing-sm
+		color text-secondary
 
-	.user-id {
-		font-family: 'Monaco', 'Menlo', monospace;
-		font-size: 0.9rem;
-		background: #f5f5f5;
-		padding: 0.2rem 0.5rem;
-		border-radius: 4px;
-	}
+	.user-id
+		font-family font-family-mono
+		font-size font-size-base
+		background bg-light
+		padding spacing-xs spacing-sm
+		border-radius radius-sm
 
-	.thread-status {
-		padding: 0.25rem 0.75rem;
-		border-radius: 12px;
-		font-size: 0.85rem;
-		font-weight: 500;
-		text-transform: uppercase;
-	}
+	.thread-status
+		status-badge(transparent, inherit)
 
-	.thread-status.open {
-		background: #d4edda;
-		color: #155724;
-	}
+		&.open
+			status-badge(#d4edda, #155724)
 
-	.thread-status.closed {
-		background: #f8d7da;
-		color: #721c24;
-	}
+		&.closed
+			status-badge(#f8d7da, #721c24)
 
-	.thread-details {
-		margin-bottom: 1.5rem;
-	}
+	.thread-details
+		margin-bottom spacing-xl
 
-	.detail-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		color: #666;
-		font-size: 0.9rem;
-		margin-bottom: 0.5rem;
-	}
+	.detail-item
+		flex-center()
+		gap spacing-sm
+		color text-secondary
+		font-size font-size-base
+		margin-bottom spacing-sm
 
-	.detail-item:last-child {
-		margin-bottom: 0;
-	}
+		&:last-child
+			margin-bottom 0
 
-	.thread-actions {
-		display: flex;
-		gap: 0.75rem;
-	}
+	.thread-actions
+		display flex
+		gap spacing-md
 
-	.view-btn {
-		flex: 1;
-		background: #28a745;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+	.view-btn
+		button-base()
+		button-size()
+		button-variant(success, success-hover)
+		flex 1
 
-	.view-btn:hover {
-		background: #218838;
-	}
+	.close-btn
+		button-base()
+		button-size()
+		button-variant(danger, danger-hover)
+		gap spacing-sm
 
-	.close-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		background: #ed4245;
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-weight: 500;
-		transition: background-color 0.2s;
-	}
+	.pagination
+		margin-top spacing-2xl
+		flex-column()
+		gap spacing-lg
+		align-items center
 
-	.close-btn:hover {
-		background: #c73e3e;
-	}
+	.pagination-info
+		color text-secondary
+		font-size font-size-base
 
-	.pagination {
-		margin-top: 2rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		align-items: center;
-	}
+	.pagination-controls
+		display flex
+		gap spacing-sm
+		align-items center
 
-	.pagination-info {
-		color: #666;
-		font-size: 0.9rem;
-	}
+		+mobile()
+			flex-wrap wrap
+			justify-content center
 
-	.pagination-controls {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-	}
+	.pagination-btn
+		button-base()
+		button-size(spacing-sm, spacing-md, font-size-base)
+		button-variant(bg-white, bg-light, text-primary)
+		border 1px solid border-light
+		gap spacing-xs
 
-	.pagination-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
-		background: white;
-		border: 1px solid #e0e0e0;
-		padding: 0.5rem 0.75rem;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		transition: all 0.2s;
-	}
+		&:hover:not(:disabled)
+			border-color text-light
 
-	.pagination-btn:hover:not(:disabled) {
-		background: #f5f5f5;
-		border-color: #ccc;
-	}
+		&:disabled
+			opacity 0.5
+			cursor not-allowed
 
-	.pagination-btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.page-btn.active {
-		background: #5865f2;
-		color: white;
-		border-color: #5865f2;
-	}
-
-	.page-btn.active:hover {
-		background: #4752c4;
-		border-color: #4752c4;
-	}
-
-	@media (max-width: 768px) {
-		.threads-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.page-header {
-			flex-direction: column;
-			gap: 1rem;
-			align-items: stretch;
-		}
-
-		.pagination-controls {
-			flex-wrap: wrap;
-			justify-content: center;
-		}
-	}
+		&.page-btn.active
+			button-variant(primary, primary-hover)
 </style>
