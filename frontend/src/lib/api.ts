@@ -173,10 +173,12 @@ export class ApiClient {
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: closedBy ? JSON.stringify({
-				closed_by_id: closedBy.id,
-				closed_by_tag: closedBy.tag
-			}) : undefined
+			body: closedBy
+				? JSON.stringify({
+						closed_by_id: closedBy.id,
+						closed_by_tag: closedBy.tag
+					})
+				: undefined
 		});
 		if (!response.ok) {
 			throw new Error('Failed to close thread');
@@ -272,7 +274,11 @@ export class ApiClient {
 		return result === null ? null : result;
 	}
 
-	async createMacro(macro: { name: string; content: string; quick_access?: boolean }): Promise<Macro> {
+	async createMacro(macro: {
+		name: string;
+		content: string;
+		quick_access?: boolean;
+	}): Promise<Macro> {
 		const response = await fetch(`${this.baseUrl}/macros`, {
 			method: 'POST',
 			headers: {

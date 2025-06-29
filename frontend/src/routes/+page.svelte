@@ -110,15 +110,19 @@
 							View Messages
 						</button>
 						{#if thread.is_open}
-							<form method="POST" action="?/closeThread" use:enhance={() => {
-								loading = true;
-								return async ({ result }) => {
-									loading = false;
-									if (result.type === 'success') {
-										await invalidateAll();
-									}
-								};
-							}}>
+							<form
+								method="POST"
+								action="?/closeThread"
+								use:enhance={() => {
+									loading = true;
+									return async ({ result }) => {
+										loading = false;
+										if (result.type === 'success') {
+											await invalidateAll();
+										}
+									};
+								}}
+							>
 								<input type="hidden" name="id" value={thread.id} />
 								<button type="submit" class="close-btn" disabled={loading}>
 									<XCircle size={16} />

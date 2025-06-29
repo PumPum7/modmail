@@ -63,7 +63,9 @@
 						<h3>Total Threads</h3>
 						<div class="metric-value">{formatNumber(data.overview.total_threads)}</div>
 						<div class="metric-detail">
-							{formatNumber(data.overview.open_threads)} open, {formatNumber(data.overview.closed_threads)} closed
+							{formatNumber(data.overview.open_threads)} open, {formatNumber(
+								data.overview.closed_threads
+							)} closed
 						</div>
 					</div>
 				</div>
@@ -114,11 +116,18 @@
 						<div class="bar-chart">
 							{#each data.threadVolume as day}
 								<div class="bar-item">
-									<div 
-										class="bar" 
-										style="height: {(day.count / Math.max(...data.threadVolume.map(d => d.count))) * 100}%"
+									<div
+										class="bar"
+										style="height: {(day.count /
+											Math.max(...data.threadVolume.map((d) => d.count))) *
+											100}%"
 									></div>
-									<div class="bar-label">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+									<div class="bar-label">
+										{new Date(day.date).toLocaleDateString('en-US', {
+											month: 'short',
+											day: 'numeric'
+										})}
+									</div>
 									<div class="bar-value">{day.count}</div>
 								</div>
 							{/each}
@@ -136,15 +145,21 @@
 					<div class="response-metrics">
 						<div class="response-metric">
 							<div class="response-label">Average First Response</div>
-							<div class="response-value">{formatHours(data.responseTimes.avg_first_response_hours)}</div>
+							<div class="response-value">
+								{formatHours(data.responseTimes.avg_first_response_hours)}
+							</div>
 						</div>
 						<div class="response-metric">
 							<div class="response-label">Median First Response</div>
-							<div class="response-value">{formatHours(data.responseTimes.median_first_response_hours)}</div>
+							<div class="response-value">
+								{formatHours(data.responseTimes.median_first_response_hours)}
+							</div>
 						</div>
 						<div class="response-metric">
 							<div class="response-label">Average Resolution Time</div>
-							<div class="response-value">{formatHours(data.responseTimes.avg_resolution_time_hours)}</div>
+							<div class="response-value">
+								{formatHours(data.responseTimes.avg_resolution_time_hours)}
+							</div>
 						</div>
 					</div>
 				</div>

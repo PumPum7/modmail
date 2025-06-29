@@ -86,21 +86,25 @@
 	{#if showCreateForm}
 		<div class="form-card">
 			<h3>Create New Macro</h3>
-			<form method="POST" action="?/create" use:enhance={() => {
-				loading = true;
-				clearMessages();
-				return async ({ result }) => {
-					loading = false;
-					if (result.type === 'success') {
-						await invalidateAll();
-						showCreateForm = false;
-						newMacroName = '';
-						newMacroContent = '';
-						newMacroQuickAccess = false;
-						success = 'Macro created successfully!';
-					}
-				};
-			}}>
+			<form
+				method="POST"
+				action="?/create"
+				use:enhance={() => {
+					loading = true;
+					clearMessages();
+					return async ({ result }) => {
+						loading = false;
+						if (result.type === 'success') {
+							await invalidateAll();
+							showCreateForm = false;
+							newMacroName = '';
+							newMacroContent = '';
+							newMacroQuickAccess = false;
+							success = 'Macro created successfully!';
+						}
+					};
+				}}
+			>
 				<div class="form-group">
 					<label for="macro-name">Name:</label>
 					<input
@@ -147,20 +151,24 @@
 	{#if editingMacro}
 		<div class="form-card">
 			<h3>Edit Macro: {editingMacro.name}</h3>
-			<form method="POST" action="?/update" use:enhance={() => {
-				loading = true;
-				clearMessages();
-				return async ({ result }) => {
-					loading = false;
-					if (result.type === 'success') {
-						await invalidateAll();
-						editingMacro = null;
-						editMacroContent = '';
-						editMacroQuickAccess = false;
-						success = 'Macro updated successfully!';
-					}
-				};
-			}}>
+			<form
+				method="POST"
+				action="?/update"
+				use:enhance={() => {
+					loading = true;
+					clearMessages();
+					return async ({ result }) => {
+						loading = false;
+						if (result.type === 'success') {
+							await invalidateAll();
+							editingMacro = null;
+							editMacroContent = '';
+							editMacroQuickAccess = false;
+							success = 'Macro updated successfully!';
+						}
+					};
+				}}
+			>
 				<input type="hidden" name="name" value={editingMacro.name} />
 				<div class="form-group">
 					<label for="edit-macro-content">Content:</label>
@@ -220,23 +228,23 @@
 							>
 								Edit
 							</button>
-							<form method="POST" action="?/delete" use:enhance={() => {
-								loading = true;
-								clearMessages();
-								return async ({ result }) => {
-									loading = false;
-									if (result.type === 'success') {
-										await invalidateAll();
-										success = 'Macro deleted successfully!';
-									}
-								};
-							}}>
+							<form
+								method="POST"
+								action="?/delete"
+								use:enhance={() => {
+									loading = true;
+									clearMessages();
+									return async ({ result }) => {
+										loading = false;
+										if (result.type === 'success') {
+											await invalidateAll();
+											success = 'Macro deleted successfully!';
+										}
+									};
+								}}
+							>
 								<input type="hidden" name="name" value={macro.name} />
-								<button
-									class="btn btn-small btn-danger"
-									type="submit"
-									disabled={loading}
-								>
+								<button class="btn btn-small btn-danger" type="submit" disabled={loading}>
 									Delete
 								</button>
 							</form>

@@ -1,5 +1,5 @@
 use crate::db;
-use crate::structs::{CreateMessage, CreateThread, CloseThread, UpdateThreadUrgency};
+use crate::structs::{CloseThread, CreateMessage, CreateThread, UpdateThreadUrgency};
 use actix_web::{get, post, put, web, Responder, Result};
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -55,7 +55,7 @@ async fn create_thread(
     thread: web::Json<CreateThread>,
 ) -> Result<impl Responder> {
     let urgency = thread.urgency.as_deref().unwrap_or("Medium");
-    
+
     let new_thread = sqlx::query_as::<_, db::Thread>(
         "INSERT INTO threads (user_id, thread_id, urgency) VALUES ($1, $2, $3) RETURNING *",
     )
@@ -125,7 +125,7 @@ async fn close_thread(
     close_data: Option<web::Json<CloseThread>>,
 ) -> Result<impl Responder> {
     let thread_id = thread_id.into_inner();
-    
+
     // Get thread info before closing
     let thread = sqlx::query_as::<_, db::Thread>("SELECT * FROM threads WHERE id = $1")
         .bind(thread_id)
@@ -144,7 +144,7 @@ async fn close_thread(
     // If moderator info is provided, send Discord notifications
     if let Some(close_info) = close_data {
         let discord_webhook_url = std::env::var("DISCORD_WEBHOOK_URL").ok();
-        
+
         if let Some(webhook_url) = discord_webhook_url {
             let payload = serde_json::json!({
                 "type": "thread_closed",
@@ -155,11 +155,7 @@ async fn close_thread(
 
             // Send webhook to Discord bot
             let client = reqwest::Client::new();
-            let _ = client
-                .post(&webhook_url)
-                .json(&payload)
-                .send()
-                .await;
+            let _ = client.post(&webhook_url).json(&payload).send().await;
         }
     }
 
@@ -209,7 +205,7 @@ async fn update_thread_urgency(
     urgency_data: web::Json<UpdateThreadUrgency>,
 ) -> Result<impl Responder> {
     let thread_id = thread_id.into_inner();
-    
+
     let updated_thread = sqlx::query_as::<_, db::Thread>(
         "UPDATE threads SET urgency = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
     )

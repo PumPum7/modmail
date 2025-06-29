@@ -1,16 +1,21 @@
 {
-  "name": "modmail-discord-bot",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js",
-    "deploy": "bun run scripts/deploy-commands.ts"
-  },
-  "dependencies": {
-    "@types/express": "^5.0.3",
-    "discord.js": "^14.0.0",
-    "dotenv": "17.0.0",
-    "express": "5.1.0"
-  }
+	"name": "modmail-discord-bot",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"start": "node index.js",
+		"dev": "node --watch index.js",
+		"deploy": "bun run scripts/deploy-commands.ts",
+		"format": "prettier --write .",
+		"lint": "prettier --check ."
+	},
+	"dependencies": {
+		"@types/express": "^5.0.3",
+		"discord.js": "^14.0.0",
+		"dotenv": "17.0.0",
+		"express": "5.1.0"
+	},
+	"devDependencies": {
+		"prettier": "^3.6.2"
+	}
 }

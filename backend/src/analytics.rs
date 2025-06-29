@@ -1,6 +1,6 @@
 use actix_web::{get, web, Responder};
 use serde::Serialize;
-use sqlx::{PgPool, FromRow};
+use sqlx::{FromRow, PgPool};
 
 #[derive(Serialize, FromRow)]
 struct AnalyticsOverview {
@@ -81,28 +81,27 @@ async fn get_analytics_overview(pool: web::Data<PgPool>) -> impl Responder {
             GROUP BY tm.thread_id
         ) first_mod_message ON threads.id = first_mod_message.thread_id
         WHERE threads.created_at IS NOT NULL
-        "#
+        "#,
     )
     .fetch_optional(pool.get_ref())
     .await
     .unwrap_or(None);
 
-    let threads_today: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM threads WHERE created_at >= CURRENT_DATE"
-    )
-    .fetch_one(pool.get_ref())
-    .await
-    .unwrap_or(0);
+    let threads_today: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM threads WHERE created_at >= CURRENT_DATE")
+            .fetch_one(pool.get_ref())
+            .await
+            .unwrap_or(0);
 
     let threads_this_week: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM threads WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'"
+        "SELECT COUNT(*) FROM threads WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'",
     )
     .fetch_one(pool.get_ref())
     .await
     .unwrap_or(0);
 
     let threads_this_month: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM threads WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'"
+        "SELECT COUNT(*) FROM threads WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'",
     )
     .fetch_one(pool.get_ref())
     .await
@@ -135,7 +134,7 @@ async fn get_thread_volume(pool: web::Data<PgPool>) -> impl Responder {
         WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
         GROUP BY DATE(created_at)
         ORDER BY DATE(created_at)
-        "#
+        "#,
     )
     .fetch_all(pool.get_ref())
     .await
@@ -166,7 +165,7 @@ async fn get_moderator_activity(pool: web::Data<PgPool>) -> impl Responder {
             GROUP BY author_tag
         ) n ON m.author_tag = n.author_tag
         ORDER BY (COALESCE(message_count, 0) + COALESCE(note_count, 0)) DESC
-        "#
+        "#,
     )
     .fetch_all(pool.get_ref())
     .await
@@ -191,7 +190,7 @@ async fn get_response_times(pool: web::Data<PgPool>) -> impl Responder {
             GROUP BY tm.thread_id
         ) first_mod_message ON threads.id = first_mod_message.thread_id
         WHERE threads.created_at >= CURRENT_DATE - INTERVAL '30 days'
-        "#
+        "#,
     )
     .fetch_optional(pool.get_ref())
     .await
@@ -204,7 +203,7 @@ async fn get_response_times(pool: web::Data<PgPool>) -> impl Responder {
         WHERE is_open = false 
         AND created_at >= CURRENT_DATE - INTERVAL '30 days'
         AND updated_at IS NOT NULL
-        "#
+        "#,
     )
     .fetch_optional(pool.get_ref())
     .await

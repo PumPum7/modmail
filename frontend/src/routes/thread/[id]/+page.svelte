@@ -80,21 +80,31 @@
 
 	function getUrgencyColor(urgency: string) {
 		switch (urgency?.toLowerCase()) {
-			case 'urgent': return '#dc2626'; // red-600
-			case 'high': return '#ea580c'; // orange-600
-			case 'medium': return '#ca8a04'; // yellow-600
-			case 'low': return '#16a34a'; // green-600
-			default: return '#6b7280'; // gray-500
+			case 'urgent':
+				return '#dc2626'; // red-600
+			case 'high':
+				return '#ea580c'; // orange-600
+			case 'medium':
+				return '#ca8a04'; // yellow-600
+			case 'low':
+				return '#16a34a'; // green-600
+			default:
+				return '#6b7280'; // gray-500
 		}
 	}
 
 	function getUrgencyBgColor(urgency: string) {
 		switch (urgency?.toLowerCase()) {
-			case 'urgent': return '#fee2e2'; // red-100
-			case 'high': return '#fed7aa'; // orange-100
-			case 'medium': return '#fef3c7'; // yellow-100
-			case 'low': return '#dcfce7'; // green-100
-			default: return '#f3f4f6'; // gray-100
+			case 'urgent':
+				return '#fee2e2'; // red-100
+			case 'high':
+				return '#fed7aa'; // orange-100
+			case 'medium':
+				return '#fef3c7'; // yellow-100
+			case 'low':
+				return '#dcfce7'; // green-100
+			default:
+				return '#f3f4f6'; // gray-100
 		}
 	}
 </script>
@@ -123,39 +133,50 @@
 					</div>
 					<div class="meta-item urgency-item">
 						{#if editingUrgency}
-							<form method="POST" action="?/updateUrgency" use:enhance={() => {
-								loading = true;
-								return async ({ result }) => {
-									if (result.type === 'success') {
-										editingUrgency = false;
-										await invalidateAll();
-									}
-									loading = false;
-								};
-							}}>
+							<form
+								method="POST"
+								action="?/updateUrgency"
+								use:enhance={() => {
+									loading = true;
+									return async ({ result }) => {
+										if (result.type === 'success') {
+											editingUrgency = false;
+											await invalidateAll();
+										}
+										loading = false;
+									};
+								}}
+							>
 								<select name="urgency" bind:value={selectedUrgency} class="urgency-select" required>
 									<option value="Low">Low</option>
 									<option value="Medium">Medium</option>
 									<option value="High">High</option>
 									<option value="Urgent">Urgent</option>
 								</select>
-								<button type="submit" class="urgency-save-btn" disabled={loading}>
-									Save
-								</button>
-								<button type="button" onclick={() => { editingUrgency = false; selectedUrgency = data.thread?.urgency || 'Medium'; }} class="urgency-cancel-btn">
+								<button type="submit" class="urgency-save-btn" disabled={loading}> Save </button>
+								<button
+									type="button"
+									onclick={() => {
+										editingUrgency = false;
+										selectedUrgency = data.thread?.urgency || 'Medium';
+									}}
+									class="urgency-cancel-btn"
+								>
 									Cancel
 								</button>
 							</form>
 						{:else}
 							<span>Priority:</span>
-							<div 
-								class="urgency-badge" 
-								style="color: {getUrgencyColor(data.thread?.urgency || 'Medium')}; background-color: {getUrgencyBgColor(data.thread?.urgency || 'Medium')}"
+							<div
+								class="urgency-badge"
+								style="color: {getUrgencyColor(
+									data.thread?.urgency || 'Medium'
+								)}; background-color: {getUrgencyBgColor(data.thread?.urgency || 'Medium')}"
 							>
 								{data.thread?.urgency || 'Medium'}
 							</div>
 							{#if data.thread?.is_open && data.user?.isModerator}
-								<button onclick={() => editingUrgency = true} class="urgency-edit-btn">
+								<button onclick={() => (editingUrgency = true)} class="urgency-edit-btn">
 									Edit
 								</button>
 							{/if}
@@ -173,15 +194,19 @@
 		</div>
 		<div class="header-actions">
 			{#if data.thread?.is_open}
-				<form method="POST" action="?/closeThread" use:enhance={() => {
-					loading = true;
-					return async ({ result }) => {
-						loading = false;
-						if (result.type === 'success') {
-							await invalidateAll();
-						}
-					};
-				}}>
+				<form
+					method="POST"
+					action="?/closeThread"
+					use:enhance={() => {
+						loading = true;
+						return async ({ result }) => {
+							loading = false;
+							if (result.type === 'success') {
+								await invalidateAll();
+							}
+						};
+					}}
+				>
 					<input type="hidden" name="id" value={data.thread?.id} />
 					<button type="submit" class="close-btn" disabled={loading}>
 						<XCircle size={16} />
@@ -365,16 +390,21 @@
 				<div class="section-header">
 					<h2>Add Internal Note</h2>
 				</div>
-				<form method="POST" action="?/addNote" use:enhance={() => {
-					loading = true;
-					clearMessages();
-					return async ({ result }) => {
-						loading = false;
-						if (result.type === 'success') {
-							await invalidateAll();
-						}
-					};
-				}} class="note-form">
+				<form
+					method="POST"
+					action="?/addNote"
+					use:enhance={() => {
+						loading = true;
+						clearMessages();
+						return async ({ result }) => {
+							loading = false;
+							if (result.type === 'success') {
+								await invalidateAll();
+							}
+						};
+					}}
+					class="note-form"
+				>
 					<div class="form-group">
 						<label for="content">Note:</label>
 						<textarea

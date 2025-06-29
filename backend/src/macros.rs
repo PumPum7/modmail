@@ -16,7 +16,7 @@ async fn get_macros(pool: web::Data<PgPool>) -> impl Responder {
 #[get("/macros/quick-access")]
 async fn get_quick_access_macros(pool: web::Data<PgPool>) -> impl Responder {
     let macros = sqlx::query_as::<_, db::Macro>(
-        "SELECT * FROM macros WHERE quick_access = TRUE ORDER BY name LIMIT 3"
+        "SELECT * FROM macros WHERE quick_access = TRUE ORDER BY name LIMIT 3",
     )
     .fetch_all(pool.get_ref())
     .await
@@ -31,14 +31,15 @@ async fn create_macro(
     macro_data: web::Json<CreateMacro>,
 ) -> Result<impl Responder> {
     let quick_access = macro_data.quick_access.unwrap_or(false);
-    
+
     // Check if we already have 3 quick access macros
     if quick_access {
-        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM macros WHERE quick_access = TRUE")
-            .fetch_one(pool.get_ref())
-            .await
-            .unwrap();
-            
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM macros WHERE quick_access = TRUE")
+                .fetch_one(pool.get_ref())
+                .await
+                .unwrap();
+
         if count >= 3 {
             return Ok(web::Json(serde_json::json!({
                 "error": "Maximum of 3 quick access macros allowed"
@@ -60,10 +61,7 @@ async fn create_macro(
 }
 
 #[get("/macros/{name}")]
-async fn get_macro_by_name(
-    pool: web::Data<PgPool>,
-    name: web::Path<String>,
-) -> impl Responder {
+async fn get_macro_by_name(pool: web::Data<PgPool>, name: web::Path<String>) -> impl Responder {
     let macro_result = sqlx::query_as::<_, db::Macro>("SELECT * FROM macros WHERE name = $1")
         .bind(name.as_str())
         .fetch_optional(pool.get_ref())
@@ -104,17 +102,17 @@ async fn update_macro(
     macro_data: web::Json<CreateMacro>,
 ) -> Result<impl Responder> {
     let quick_access = macro_data.quick_access.unwrap_or(false);
-    
+
     // Check if we already have 3 quick access macros (excluding current one)
     if quick_access {
         let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND name != $1"
+            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND name != $1",
         )
         .bind(name.as_str())
         .fetch_one(pool.get_ref())
         .await
         .unwrap();
-            
+
         if count >= 3 {
             return Ok(web::Json(serde_json::json!({
                 "error": "Maximum of 3 quick access macros allowed"
