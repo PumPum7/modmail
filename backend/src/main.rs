@@ -12,6 +12,17 @@ mod notes;
 mod structs;
 mod threads;
 
+use actix_web::{get, HttpResponse, Responder};
+
+#[get("/health")]
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "healthy",
+        "timestamp": chrono::Utc::now().to_rfc3339()
+    }))
+}
+
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
@@ -29,6 +40,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(web::Data::new(pool.clone()))
+            .service(health_check)
             .service(messages::get_messages)
             .service(messages::create_message)
             .service(threads::get_threads)
