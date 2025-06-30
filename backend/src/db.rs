@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, types::uuid::Uuid, Pool, Postgres};
+use std::time::Duration;
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct Message {
@@ -58,7 +59,12 @@ pub struct BlockedUser {
 
 pub async fn connect(database_url: &str) -> Result<Pool<Postgres>, sqlx::Error> {
     PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(20)
+        .min_connections(2)
+        .acquire_timeout(Duration::from_secs(30))
+        .idle_timeout(Duration::from_secs(600)) // 10 minutes
+        .max_lifetime(Duration::from_secs(1800)) // 30 minutes
+        .test_before_acquire(true)
         .connect(database_url)
         .await
 }

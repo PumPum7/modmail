@@ -25,10 +25,14 @@ async fn health_check() -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
+
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = db::connect(&database_url).await.unwrap();
 
-    HttpServer::new(move || {
+    // Clone pool for background task before moving into HttpServer
+    let analytics_pool = pool.clone();
+
+    let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
@@ -64,8 +68,19 @@ async fn main() -> std::io::Result<()> {
             .service(analytics::get_thread_volume)
             .service(analytics::get_moderator_activity)
             .service(analytics::get_response_times)
+            .service(analytics::refresh_analytics) // Add new refresh endpoint
     })
     .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+    .run();
+
+    // Start background task for analytics refresh
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600)); // Refresh every hour
+        loop {
+            interval.tick().await;
+            analytics::auto_refresh_analytics(&analytics_pool).await;
+        }
+    });
+
+    server.await
 }
