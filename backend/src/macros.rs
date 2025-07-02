@@ -1,197 +1,215 @@
 use crate::db;
 use crate::structs::CreateMacro;
-use actix_web::{delete, get, post, put, web, HttpResponse, Responder, Result};
+use axum::{
+    extract::{Json, Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
+};
 use sqlx::PgPool;
 
-#[get("/macros")]
-async fn get_macros(pool: web::Data<PgPool>) -> impl Responder {
-    let macros_result = sqlx::query_as::<_, db::Macro>("SELECT * FROM macros ORDER BY name")
-        .fetch_all(pool.get_ref())
-        .await;
+pub fn macro_routes(db_pool: PgPool) -> Router {
+    Router::new()
+        .route(
+            "/guilds/:guild_id/macros",
+            get(get_macros).post(create_macro),
+        )
+        .route(
+            "/guilds/:guild_id/macros/quick-access",
+            get(get_quick_access_macros),
+        )
+        .route(
+            "/guilds/:guild_id/macros/:name",
+            get(get_macro_by_name)
+                .put(update_macro)
+                .delete(delete_macro),
+        )
+        .with_state(db_pool)
+}
+
+async fn get_macros(State(pool): State<PgPool>, Path(guild_id): Path<String>) -> Response {
+    let macros_result =
+        sqlx::query_as::<_, db::Macro>("SELECT * FROM macros WHERE guild_id = $1 ORDER BY name")
+            .bind(guild_id)
+            .fetch_all(&pool)
+            .await;
 
     match macros_result {
-        Ok(macros) => HttpResponse::Ok().json(macros),
-        Err(e) => {
-            eprintln!("Database error fetching macros: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to fetch macros"
-            }))
-        }
+        Ok(macros) => (StatusCode::OK, Json(macros)).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to fetch macros" })),
+        )
+            .into_response(),
     }
 }
 
-#[get("/macros/quick-access")]
-async fn get_quick_access_macros(pool: web::Data<PgPool>) -> impl Responder {
+async fn get_quick_access_macros(
+    State(pool): State<PgPool>,
+    Path(guild_id): Path<String>,
+) -> Response {
     let macros_result = sqlx::query_as::<_, db::Macro>(
-        "SELECT * FROM macros WHERE quick_access = TRUE ORDER BY name LIMIT 3",
+        "SELECT * FROM macros WHERE quick_access = TRUE AND guild_id = $1 ORDER BY name LIMIT 3",
     )
-    .fetch_all(pool.get_ref())
+    .bind(guild_id)
+    .fetch_all(&pool)
     .await;
 
     match macros_result {
-        Ok(macros) => HttpResponse::Ok().json(macros),
-        Err(e) => {
-            eprintln!("Database error fetching quick access macros: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to fetch quick access macros"
-            }))
-        }
+        Ok(macros) => (StatusCode::OK, Json(macros)).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to fetch quick access macros" })),
+        )
+            .into_response(),
     }
 }
 
-#[post("/macros")]
 async fn create_macro(
-    pool: web::Data<PgPool>,
-    macro_data: web::Json<CreateMacro>,
-) -> Result<impl Responder> {
-    let quick_access = macro_data.quick_access.unwrap_or(false);
+    State(pool): State<PgPool>,
+    Path(guild_id): Path<String>,
+    Json(payload): Json<CreateMacro>,
+) -> Response {
+    let quick_access = payload.quick_access.unwrap_or(false);
 
-    // Check if we already have 3 quick access macros
     if quick_access {
-        let count_result: Result<i64, sqlx::Error> =
-            sqlx::query_scalar("SELECT COUNT(*) FROM macros WHERE quick_access = TRUE")
-                .fetch_one(pool.get_ref())
-                .await;
+        let count_result: Result<i64, sqlx::Error> = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND guild_id = $1",
+        )
+        .bind(guild_id.clone())
+        .fetch_one(&pool)
+        .await;
 
-        let count = match count_result {
-            Ok(count) => count,
-            Err(e) => {
-                eprintln!("Database error counting quick access macros: {}", e);
-                return Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                    "error": "Failed to check quick access macro count"
-                })));
+        if let Ok(count) = count_result {
+            if count >= 3 {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(
+                        serde_json::json!({ "error": "Maximum of 3 quick access macros allowed" }),
+                    ),
+                )
+                    .into_response();
             }
-        };
-
-        if count >= 3 {
-            return Ok(HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Maximum of 3 quick access macros allowed"
-            })));
         }
     }
 
     let new_macro_result = sqlx::query_as::<_, db::Macro>(
-        "INSERT INTO macros (name, content, quick_access) VALUES ($1, $2, $3) RETURNING *",
+        "INSERT INTO macros (name, content, quick_access, guild_id) VALUES ($1, $2, $3, $4) RETURNING *",
     )
-    .bind(&macro_data.name)
-    .bind(&macro_data.content)
+    .bind(&payload.name)
+    .bind(&payload.content)
     .bind(quick_access)
-    .fetch_one(pool.get_ref())
+    .bind(guild_id)
+    .fetch_one(&pool)
     .await;
 
     match new_macro_result {
-        Ok(new_macro) => Ok(HttpResponse::Ok().json(new_macro)),
-        Err(e) => {
-            eprintln!("Database error creating macro: {}", e);
-            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to create macro"
-            })))
-        }
+        Ok(new_macro) => (StatusCode::CREATED, Json(new_macro)).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to create macro" })),
+        )
+            .into_response(),
     }
 }
 
-#[get("/macros/{name}")]
-async fn get_macro_by_name(pool: web::Data<PgPool>, name: web::Path<String>) -> impl Responder {
-    let macro_result = sqlx::query_as::<_, db::Macro>("SELECT * FROM macros WHERE name = $1")
-        .bind(name.as_str())
-        .fetch_optional(pool.get_ref())
-        .await;
+async fn get_macro_by_name(
+    State(pool): State<PgPool>,
+    Path((guild_id, name)): Path<(String, String)>,
+) -> Response {
+    let macro_result =
+        sqlx::query_as::<_, db::Macro>("SELECT * FROM macros WHERE name = $1 AND guild_id = $2")
+            .bind(name)
+            .bind(guild_id)
+            .fetch_optional(&pool)
+            .await;
 
     match macro_result {
-        Ok(Some(macro_data)) => HttpResponse::Ok().json(macro_data),
-        Ok(None) => HttpResponse::Ok().json(serde_json::json!(null)),
-        Err(e) => {
-            eprintln!("Database error fetching macro: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to fetch macro"
-            }))
-        }
+        Ok(Some(macro_data)) => (StatusCode::OK, Json(macro_data)).into_response(),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Macro not found" })),
+        )
+            .into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to fetch macro" })),
+        )
+            .into_response(),
     }
 }
 
-#[delete("/macros/{name}")]
-async fn delete_macro(pool: web::Data<PgPool>, name: web::Path<String>) -> impl Responder {
-    let delete_result = sqlx::query("DELETE FROM macros WHERE name = $1")
-        .bind(name.as_str())
-        .execute(pool.get_ref())
+async fn delete_macro(
+    State(pool): State<PgPool>,
+    Path((guild_id, name)): Path<(String, String)>,
+) -> Response {
+    let delete_result = sqlx::query("DELETE FROM macros WHERE name = $1 AND guild_id = $2")
+        .bind(name)
+        .bind(guild_id)
+        .execute(&pool)
         .await;
 
     match delete_result {
-        Ok(result) => {
-            if result.rows_affected() > 0 {
-                HttpResponse::Ok().json(serde_json::json!({
-                    "success": true,
-                    "message": "Macro deleted successfully"
-                }))
-            } else {
-                HttpResponse::NotFound().json(serde_json::json!({
-                    "success": false,
-                    "message": "Macro not found"
-                }))
-            }
-        }
-        Err(e) => {
-            eprintln!("Database error deleting macro: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to delete macro"
-            }))
-        }
+        Ok(result) if result.rows_affected() > 0 => (StatusCode::NO_CONTENT).into_response(),
+        Ok(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Macro not found" })),
+        )
+            .into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to delete macro" })),
+        )
+            .into_response(),
     }
 }
 
-#[put("/macros/{name}")]
 async fn update_macro(
-    pool: web::Data<PgPool>,
-    name: web::Path<String>,
-    macro_data: web::Json<CreateMacro>,
-) -> Result<impl Responder> {
-    let quick_access = macro_data.quick_access.unwrap_or(false);
+    State(pool): State<PgPool>,
+    Path((guild_id, name)): Path<(String, String)>,
+    Json(payload): Json<CreateMacro>,
+) -> Response {
+    let quick_access = payload.quick_access.unwrap_or(false);
 
-    // Check if we already have 3 quick access macros (excluding current one)
     if quick_access {
         let count_result: Result<i64, sqlx::Error> = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND name != $1",
+            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND name != $1 AND guild_id = $2",
         )
-        .bind(name.as_str())
-        .fetch_one(pool.get_ref())
+        .bind(name.clone())
+        .bind(guild_id.clone())
+        .fetch_one(&pool)
         .await;
 
-        let count = match count_result {
-            Ok(count) => count,
-            Err(e) => {
-                eprintln!("Database error counting quick access macros: {}", e);
-                return Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                    "error": "Failed to check quick access macro count"
-                })));
+        if let Ok(count) = count_result {
+            if count >= 3 {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(
+                        serde_json::json!({ "error": "Maximum of 3 quick access macros allowed" }),
+                    ),
+                )
+                    .into_response();
             }
-        };
-
-        if count >= 3 {
-            return Ok(HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Maximum of 3 quick access macros allowed"
-            })));
         }
     }
 
     let updated_macro_result = sqlx::query_as::<_, db::Macro>(
-        "UPDATE macros SET content = $1, quick_access = $2 WHERE name = $3 RETURNING *",
+        "UPDATE macros SET content = $1, quick_access = $2 WHERE name = $3 AND guild_id = $4 RETURNING *",
     )
-    .bind(&macro_data.content)
+    .bind(&payload.content)
     .bind(quick_access)
-    .bind(name.as_str())
-    .fetch_one(pool.get_ref())
+    .bind(name)
+    .bind(guild_id)
+    .fetch_one(&pool)
     .await;
 
     match updated_macro_result {
-        Ok(updated_macro) => Ok(HttpResponse::Ok().json(updated_macro)),
-        Err(sqlx::Error::RowNotFound) => Ok(HttpResponse::NotFound().json(serde_json::json!({
-            "error": "Macro not found"
-        }))),
-        Err(e) => {
-            eprintln!("Database error updating macro: {}", e);
-            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to update macro"
-            })))
-        }
+        Ok(updated_macro) => (StatusCode::OK, Json(updated_macro)).into_response(),
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Macro not found" })),
+        )
+            .into_response(),
     }
 }

@@ -1,98 +1,106 @@
 use crate::db;
 use crate::structs::CreateNote;
-use actix_web::{get, post, web, HttpResponse, Responder, Result};
+use axum::{
+    extract::{Json, Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-#[get("/threads/{id}/notes")]
-async fn get_thread_notes(pool: web::Data<PgPool>, thread_id: web::Path<i32>) -> impl Responder {
+pub fn note_routes(db_pool: PgPool) -> Router {
+    Router::new()
+        .route(
+            "/guilds/:guild_id/threads/:thread_id/notes",
+            get(get_thread_notes).post(add_note_to_thread),
+        )
+        .with_state(db_pool)
+}
+
+async fn get_thread_notes(
+    State(pool): State<PgPool>,
+    Path((guild_id, thread_id)): Path<(String, i32)>,
+) -> Response {
+    let thread_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM threads WHERE id = $1 AND guild_id = $2)",
+    )
+    .bind(thread_id)
+    .bind(guild_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(false);
+
+    if !thread_exists {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Thread not found in this guild" })),
+        )
+            .into_response();
+    }
+
     let notes_result = sqlx::query_as::<_, db::Note>(
         "SELECT * FROM notes WHERE thread_id = $1 ORDER BY created_at ASC",
     )
-    .bind(thread_id.into_inner())
-    .fetch_all(pool.get_ref())
+    .bind(thread_id)
+    .fetch_all(&pool)
     .await;
 
     match notes_result {
-        Ok(notes) => HttpResponse::Ok().json(notes),
-        Err(e) => {
-            eprintln!("Database error fetching notes: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to fetch notes"
-            }))
-        }
+        Ok(notes) => (StatusCode::OK, Json(notes)).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to fetch notes" })),
+        )
+            .into_response(),
     }
 }
 
-#[post("/threads/{id}/notes")]
 async fn add_note_to_thread(
-    pool: web::Data<PgPool>,
-    path: web::Path<i32>,
-    note: web::Json<CreateNote>,
-) -> Result<impl Responder> {
-    // Validate author ID format (Discord IDs are numeric)
-    if !note.author_id.chars().all(|c| c.is_ascii_digit()) {
-        return Ok(HttpResponse::BadRequest().json(serde_json::json!({
-            "error": "Invalid author ID format"
-        })));
+    State(pool): State<PgPool>,
+    Path((guild_id, thread_id)): Path<(String, i32)>,
+    Json(payload): Json<CreateNote>,
+) -> Response {
+    let thread_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM threads WHERE id = $1 AND guild_id = $2)",
+    )
+    .bind(thread_id)
+    .bind(guild_id.clone())
+    .fetch_one(&pool)
+    .await
+    .unwrap_or(false);
+
+    if !thread_exists {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": "Thread not found in this guild" })),
+        )
+            .into_response();
     }
 
-    let thread_id = path.into_inner();
     let note_id = Uuid::new_v4();
     let created_at = chrono::Utc::now();
 
-    let insert_result = sqlx::query("INSERT INTO notes (id, thread_id, author_id, author_tag, content, created_at) VALUES ($1, $2, $3, $4, $5, $6)")
-        .bind(&note_id)
-        .bind(thread_id)
-        .bind(&note.author_id)
-        .bind(&note.author_tag)
-        .bind(&note.content)
-        .bind(&created_at)
-        .execute(pool.get_ref())
-        .await;
+    let new_note_result = sqlx::query_as::<_, db::Note>(
+        "INSERT INTO notes (id, thread_id, author_id, author_tag, content, created_at, guild_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+    )
+    .bind(note_id)
+    .bind(thread_id)
+    .bind(&payload.author_id)
+    .bind(&payload.author_tag)
+    .bind(&payload.content)
+    .bind(created_at)
+    .bind(guild_id)
+    .fetch_one(&pool)
+    .await;
 
-    match insert_result {
-        Ok(_) => {
-            let new_note = db::Note {
-                id: note_id,
-                thread_id,
-                author_id: note.author_id.clone(),
-                author_tag: note.author_tag.clone(),
-                content: note.content.clone(),
-                created_at,
-            };
-            Ok(HttpResponse::Ok().json(new_note))
-        }
-        Err(sqlx::Error::Database(db_err)) => {
-            if let Some(constraint) = db_err.constraint() {
-                match constraint {
-                    "chk_author_id_format" => {
-                        Ok(HttpResponse::BadRequest().json(serde_json::json!({
-                            "error": "Invalid author ID format"
-                        })))
-                    }
-                    "fk_notes_thread" => Ok(HttpResponse::BadRequest().json(serde_json::json!({
-                        "error": "Thread not found"
-                    }))),
-                    _ => {
-                        eprintln!("Database constraint violation: {}", constraint);
-                        Ok(HttpResponse::BadRequest().json(serde_json::json!({
-                            "error": "Data validation failed"
-                        })))
-                    }
-                }
-            } else {
-                eprintln!("Database error creating note: {}", db_err);
-                Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                    "error": "Failed to create note"
-                })))
-            }
-        }
-        Err(e) => {
-            eprintln!("Database error creating note: {}", e);
-            Ok(HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to create note"
-            })))
-        }
+    match new_note_result {
+        Ok(new_note) => (StatusCode::CREATED, Json(new_note)).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to create note" })),
+        )
+            .into_response(),
     }
 }

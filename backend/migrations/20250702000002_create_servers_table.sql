@@ -1,0 +1,10 @@
+CREATE TABLE servers (
+    id SERIAL PRIMARY KEY,
+    guild_id VARCHAR(255) NOT NULL UNIQUE,
+    guild_name VARCHAR(255) NOT NULL,
+    is_premium BOOLEAN NOT NULL DEFAULT FALSE,
+    max_threads INTEGER DEFAULT 50,
+    max_macros INTEGER DEFAULT 10,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
