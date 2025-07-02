@@ -1,24 +1,43 @@
 import type { PageServerLoad, Actions } from './$types';
 import { api } from '$lib/api';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals: { user } }) => {
+export const load: PageServerLoad = async ({ locals, cookies }) => {
+	const user = locals.user;
+	const selectedGuildId = cookies.get('selected_guild_id');
+
+	if (!user) {
+		throw redirect(302, '/login');
+	}
+
+	if (!selectedGuildId) {
+		throw redirect(302, '/select-server');
+	}
+
 	try {
-		const macros = await api.getAllMacros();
+		const macros = await api.getAllMacros(selectedGuildId);
 		return {
-			macros
+			macros,
+			user
 		};
 	} catch (error) {
 		console.error('Error loading macros:', error);
 		return {
 			macros: [],
-			error: 'Failed to load macros'
+			error: 'Failed to load macros',
+			user
 		};
 	}
 };
 
 export const actions: Actions = {
-	create: async ({ request }) => {
+	create: async ({ request, cookies }) => {
+		const selectedGuildId = cookies.get('selected_guild_id');
+
+		if (!selectedGuildId) {
+			return fail(400, { error: 'No server selected' });
+		}
+
 		const data = await request.formData();
 		const name = data.get('name')?.toString();
 		const content = data.get('content')?.toString();
@@ -31,7 +50,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await api.createMacro({
+			await api.createMacro(selectedGuildId, {
 				name: name.trim(),
 				content: content.trim(),
 				quick_access
@@ -48,7 +67,13 @@ export const actions: Actions = {
 		}
 	},
 
-	update: async ({ request }) => {
+	update: async ({ request, cookies }) => {
+		const selectedGuildId = cookies.get('selected_guild_id');
+
+		if (!selectedGuildId) {
+			return fail(400, { error: 'No server selected' });
+		}
+
 		const data = await request.formData();
 		const name = data.get('name')?.toString();
 		const content = data.get('content')?.toString();
@@ -61,7 +86,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await api.updateMacro(name, content.trim(), quick_access);
+			await api.updateMacro(selectedGuildId, name, content.trim(), quick_access);
 
 			return {
 				success: 'Macro updated successfully!'
@@ -74,7 +99,13 @@ export const actions: Actions = {
 		}
 	},
 
-	delete: async ({ request }) => {
+	delete: async ({ request, cookies }) => {
+		const selectedGuildId = cookies.get('selected_guild_id');
+
+		if (!selectedGuildId) {
+			return fail(400, { error: 'No server selected' });
+		}
+
 		const data = await request.formData();
 		const name = data.get('name')?.toString();
 
@@ -85,7 +116,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			const result = await api.deleteMacro(name);
+			const result = await api.deleteMacro(selectedGuildId, name);
 
 			if (result.success) {
 				return {

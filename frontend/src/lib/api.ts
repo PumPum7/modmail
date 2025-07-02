@@ -109,24 +109,37 @@ export class ApiClient {
 		this.baseUrl = PUBLIC_BACKEND_URL;
 	}
 
-	async getAllMessages(): Promise<Message[]> {
-		const response = await fetch(`${this.baseUrl}/messages`);
+	async getAllMessages(guildId: string): Promise<Message[]> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/messages`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch messages');
 		}
 		return response.json();
 	}
 
-	async getAllThreads(page: number = 1, limit: number = 20): Promise<ThreadsResponse> {
-		const response = await fetch(`${this.baseUrl}/threads?page=${page}&limit=${limit}`);
+	async getAllThreads(
+		guildId: string,
+		page: number = 1,
+		limit: number = 20
+	): Promise<ThreadsResponse> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/threads?page=${page}&limit=${limit}`
+		);
 		if (!response.ok) {
 			throw new Error('Failed to fetch threads');
 		}
 		return response.json();
 	}
 
-	async getThread(id: string, page: number = 1, limit: number = 50): Promise<ThreadWithMessages> {
-		const response = await fetch(`${this.baseUrl}/threads/${id}?page=${page}&limit=${limit}`);
+	async getThread(
+		guildId: string,
+		id: string,
+		page: number = 1,
+		limit: number = 50
+	): Promise<ThreadWithMessages> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/threads/${id}?page=${page}&limit=${limit}`
+		);
 		if (!response.ok) {
 			throw new Error('Failed to fetch thread');
 		}
@@ -138,8 +151,8 @@ export class ApiClient {
 		};
 	}
 
-	async getThreadNotes(id: string): Promise<Note[]> {
-		const response = await fetch(`${this.baseUrl}/threads/${id}/notes`);
+	async getThreadNotes(guildId: string, id: string): Promise<Note[]> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/threads/${id}/notes`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch thread notes');
 		}
@@ -147,6 +160,7 @@ export class ApiClient {
 	}
 
 	async addNoteToThread(
+		guildId: string,
 		threadId: number,
 		note: {
 			author_id: string;
@@ -154,12 +168,12 @@ export class ApiClient {
 			content: string;
 		}
 	): Promise<Note> {
-		const response = await fetch(`${this.baseUrl}/threads/${threadId}/notes`, {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/threads/${threadId}/notes`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(note)
+			body: JSON.stringify({ ...note, guild_id: guildId })
 		});
 		if (!response.ok) {
 			throw new Error('Failed to add note to thread');
@@ -167,8 +181,12 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async closeThread(id: number, closedBy?: { id: string; tag: string }): Promise<Thread> {
-		const response = await fetch(`${this.baseUrl}/threads/${id}/close`, {
+	async closeThread(
+		guildId: string,
+		id: number,
+		closedBy?: { id: string; tag: string }
+	): Promise<Thread> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/threads/${id}/close`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
@@ -187,6 +205,7 @@ export class ApiClient {
 	}
 
 	async addMessageToThread(
+		guildId: string,
 		threadId: number,
 		message: {
 			author_id: string;
@@ -195,14 +214,15 @@ export class ApiClient {
 			attachments?: Attachment[];
 		}
 	): Promise<Message> {
-		const response = await fetch(`${this.baseUrl}/threads/${threadId}/messages`, {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/threads/${threadId}/messages`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
 				...message,
-				attachments: message.attachments || []
+				attachments: message.attachments || [],
+				guild_id: guildId
 			})
 		});
 		if (!response.ok) {
@@ -211,35 +231,38 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async getAllMacros(): Promise<Macro[]> {
-		const response = await fetch(`${this.baseUrl}/macros`);
+	async getAllMacros(guildId: string): Promise<Macro[]> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/macros`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch macros');
 		}
 		return response.json();
 	}
 
-	async getAllBlockedUsers(): Promise<BlockedUser[]> {
-		const response = await fetch(`${this.baseUrl}/blocked-users`);
+	async getAllBlockedUsers(guildId: string): Promise<BlockedUser[]> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/blocked-users`);
 		if (!response.ok) {
 			throw new Error('Failed to fetch blocked users');
 		}
 		return response.json();
 	}
 
-	async blockUser(blockedUser: {
-		user_id: string;
-		user_tag: string;
-		blocked_by: string;
-		blocked_by_tag: string;
-		reason?: string;
-	}): Promise<BlockedUser> {
-		const response = await fetch(`${this.baseUrl}/blocked-users`, {
+	async blockUser(
+		guildId: string,
+		blockedUser: {
+			user_id: string;
+			user_tag: string;
+			blocked_by: string;
+			blocked_by_tag: string;
+			reason?: string;
+		}
+	): Promise<BlockedUser> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/blocked-users`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(blockedUser)
+			body: JSON.stringify({ ...blockedUser, guild_id: guildId })
 		});
 		if (!response.ok) {
 			throw new Error('Failed to block user');
@@ -247,26 +270,39 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async unblockUser(userId: string): Promise<{ success: boolean; message: string }> {
-		const response = await fetch(`${this.baseUrl}/blocked-users/${encodeURIComponent(userId)}`, {
-			method: 'DELETE'
-		});
+	async unblockUser(
+		guildId: string,
+		userId: string
+	): Promise<{ success: boolean; message: string }> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/blocked-users/${encodeURIComponent(userId)}`,
+			{
+				method: 'DELETE'
+			}
+		);
 		if (!response.ok) {
 			throw new Error('Failed to unblock user');
 		}
 		return response.json();
 	}
 
-	async isUserBlocked(userId: string): Promise<{ blocked: boolean; user?: BlockedUser }> {
-		const response = await fetch(`${this.baseUrl}/blocked-users/${encodeURIComponent(userId)}`);
+	async isUserBlocked(
+		guildId: string,
+		userId: string
+	): Promise<{ blocked: boolean; user?: BlockedUser }> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/blocked-users/${encodeURIComponent(userId)}`
+		);
 		if (!response.ok) {
 			throw new Error('Failed to check if user is blocked');
 		}
 		return response.json();
 	}
 
-	async getMacro(name: string): Promise<Macro | null> {
-		const response = await fetch(`${this.baseUrl}/macros/${encodeURIComponent(name)}`);
+	async getMacro(guildId: string, name: string): Promise<Macro | null> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/macros/${encodeURIComponent(name)}`
+		);
 		if (!response.ok) {
 			return null;
 		}
@@ -274,17 +310,20 @@ export class ApiClient {
 		return result === null ? null : result;
 	}
 
-	async createMacro(macro: {
-		name: string;
-		content: string;
-		quick_access?: boolean;
-	}): Promise<Macro> {
-		const response = await fetch(`${this.baseUrl}/macros`, {
+	async createMacro(
+		guildId: string,
+		macro: {
+			name: string;
+			content: string;
+			quick_access?: boolean;
+		}
+	): Promise<Macro> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/macros`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify(macro)
+			body: JSON.stringify({ ...macro, guild_id: guildId })
 		});
 		if (!response.ok) {
 			throw new Error('Failed to create macro');
@@ -292,32 +331,43 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async deleteMacro(name: string): Promise<{ success: boolean; message: string }> {
-		const response = await fetch(`${this.baseUrl}/macros/${encodeURIComponent(name)}`, {
-			method: 'DELETE'
-		});
+	async deleteMacro(guildId: string, name: string): Promise<{ success: boolean; message: string }> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/macros/${encodeURIComponent(name)}`,
+			{
+				method: 'DELETE'
+			}
+		);
 		if (!response.ok) {
 			throw new Error('Failed to delete macro');
 		}
 		return response.json();
 	}
 
-	async updateMacro(name: string, content: string, quick_access?: boolean): Promise<Macro> {
-		const response = await fetch(`${this.baseUrl}/macros/${encodeURIComponent(name)}`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({ name, content, quick_access })
-		});
+	async updateMacro(
+		guildId: string,
+		name: string,
+		content: string,
+		quick_access?: boolean
+	): Promise<Macro> {
+		const response = await fetch(
+			`${this.baseUrl}/guilds/${guildId}/macros/${encodeURIComponent(name)}`,
+			{
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ name, content, quick_access, guild_id: guildId })
+			}
+		);
 		if (!response.ok) {
 			throw new Error('Failed to update macro');
 		}
 		return response.json();
 	}
 
-	async updateThreadUrgency(threadId: number, urgency: string): Promise<Thread> {
-		const response = await fetch(`${this.baseUrl}/threads/${threadId}/urgency`, {
+	async updateThreadUrgency(guildId: string, threadId: number, urgency: string): Promise<Thread> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/threads/${threadId}/urgency`, {
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json'
@@ -330,27 +380,38 @@ export class ApiClient {
 		return response.json();
 	}
 
-	async getAnalyticsOverview(): Promise<AnalyticsOverview> {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/overview`);
+	async getAnalyticsOverview(guildId: string): Promise<AnalyticsOverview> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/analytics/overview`);
 		if (!response.ok) throw new Error('Failed to fetch analytics overview');
 		return response.json();
 	}
 
-	async getThreadVolume(): Promise<ThreadVolumeData[]> {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/thread-volume`);
+	async getThreadVolume(guildId: string): Promise<ThreadVolumeData[]> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/analytics/thread-volume`);
 		if (!response.ok) throw new Error('Failed to fetch thread volume data');
 		return response.json();
 	}
 
-	async getModeratorActivity(): Promise<ModeratorActivity[]> {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/moderator-activity`);
+	async getModeratorActivity(guildId: string): Promise<ModeratorActivity[]> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/analytics/moderator-activity`);
 		if (!response.ok) throw new Error('Failed to fetch moderator activity');
 		return response.json();
 	}
 
-	async getResponseTimes(): Promise<ResponseTimeMetrics> {
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/analytics/response-times`);
+	async getResponseTimes(guildId: string): Promise<ResponseTimeMetrics> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/analytics/response-times`);
 		if (!response.ok) throw new Error('Failed to fetch response times');
+		return response.json();
+	}
+
+	// New method to get user's available guilds
+	async getUserGuilds(): Promise<any[]> {
+		const response = await fetch(`${this.baseUrl}/auth/guilds`, {
+			credentials: 'include'
+		});
+		if (!response.ok) {
+			throw new Error('Failed to fetch user guilds');
+		}
 		return response.json();
 	}
 }

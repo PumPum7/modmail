@@ -13,8 +13,10 @@ export async function handleChannelMessage(message: Message, client: Client) {
 	// Only handle messages in guild channels
 	if (!message.guild) return;
 
+	const guildId = message.guild.id;
+
 	// Check if this is a modmail thread
-	const thread = await getThreadByChannelId(message.channelId);
+	const thread = await getThreadByChannelId(message.channelId, guildId);
 
 	if (!thread || !thread.is_open) return;
 
@@ -37,6 +39,7 @@ export async function handleChannelMessage(message: Message, client: Client) {
 		// Add to thread
 		await addMessageToThread(
 			thread.id,
+			guildId,
 			message.author.id,
 			message.author.tag,
 			message.content,

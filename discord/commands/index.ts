@@ -6,6 +6,7 @@ import { handleBlockCommand, handleUnblockCommand } from './block.js';
 import { handleMacroCommand } from './macro.js';
 import { handleDeleteCommand } from './delete.js';
 import { handleUrgencyCommand } from './urgency.js';
+import { handleConfigCommand } from './config.js';
 
 export async function handleSlashCommand(interaction: ChatInputCommandInteraction, client: Client) {
 	const { commandName } = interaction;
@@ -35,6 +36,9 @@ export async function handleSlashCommand(interaction: ChatInputCommandInteractio
 				break;
 			case 'urgency':
 				await handleUrgencyCommand(interaction);
+				break;
+			case 'config':
+				await handleConfigCommand(interaction);
 				break;
 			default:
 				await interaction.reply({

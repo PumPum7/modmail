@@ -3,10 +3,11 @@ import { getThreadByChannelId, updateThreadUrgency } from '../api.js';
 
 export async function handleUrgencyCommand(interaction: ChatInputCommandInteraction) {
 	const urgency = interaction.options.getString('level', true);
+	const guildId = interaction.guildId!;
 
 	try {
 		// Get thread from current channel
-		const thread = await getThreadByChannelId(interaction.channelId);
+		const thread = await getThreadByChannelId(interaction.channelId, guildId);
 
 		if (!thread) {
 			await interaction.reply({
@@ -37,7 +38,7 @@ export async function handleUrgencyCommand(interaction: ChatInputCommandInteract
 		}
 
 		// Update thread urgency
-		await updateThreadUrgency(thread.id, normalizedUrgency);
+		await updateThreadUrgency(thread.id, guildId, normalizedUrgency);
 
 		await interaction.reply({
 			content: `✅ Thread urgency updated to **${normalizedUrgency}**`,

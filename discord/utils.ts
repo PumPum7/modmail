@@ -13,14 +13,18 @@ import {
 } from 'discord.js';
 import type { Attachment } from './types.js';
 
-const RANDOMIZE_NAMES = process.env.RANDOMIZE_NAMES === 'true';
 const FRONTEND_URL = process.env.PUBLIC_FRONT_END_URL;
 
 export function generateRandomString(): string {
 	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-export function generateWelcomeEmbed(user: User, guild: Guild, introData?: any): EmbedBuilder {
+export function generateWelcomeEmbed(
+	user: User,
+	guild: Guild,
+	welcomeMessage?: string,
+	introData?: any
+): EmbedBuilder {
 	const member = guild.members.cache.get(user.id);
 	let description = `**User:** ${user.tag} (${
 		user.id
@@ -32,6 +36,11 @@ export function generateWelcomeEmbed(user: User, guild: Guild, introData?: any):
 		if (introData.subject) description += `\n**Subject:** ${introData.subject}`;
 		if (introData.description) description += `\n**Description:** ${introData.description}`;
 		if (introData.urgency) description += `\n**Priority:** ${introData.urgency}`;
+	}
+
+	// Add custom welcome message if configured
+	if (welcomeMessage) {
+		description += `\n\n**Welcome Message:**\n${welcomeMessage}`;
 	}
 
 	return new EmbedBuilder()
@@ -129,8 +138,8 @@ export function addAttachmentsToEmbed(embed: EmbedBuilder, attachments: Attachme
 	return embed;
 }
 
-export function generateChannelName(user: User): string {
-	return RANDOMIZE_NAMES ? generateRandomString() : `${user.username}-${user.discriminator}`;
+export function generateChannelName(user: User, randomizeNames: boolean = false): string {
+	return randomizeNames ? generateRandomString() : `${user.username}-${user.discriminator}`;
 }
 
 export function createUserClosureNotificationEmbed(): EmbedBuilder {

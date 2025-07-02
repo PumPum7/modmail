@@ -4,8 +4,9 @@ import { getThreadByChannelId, addNoteToThread } from '../api.js';
 export async function handleNoteCommand(interaction: ChatInputCommandInteraction) {
 	const noteContent = interaction.options.getString('content', true);
 	const channelId = interaction.channelId;
+	const guildId = interaction.guildId!;
 
-	const thread = await getThreadByChannelId(channelId);
+	const thread = await getThreadByChannelId(channelId, guildId);
 
 	if (!thread) {
 		await interaction.reply({
@@ -17,7 +18,13 @@ export async function handleNoteCommand(interaction: ChatInputCommandInteraction
 
 	try {
 		// Add note to thread
-		await addNoteToThread(thread.id, interaction.user.id, interaction.user.tag, noteContent);
+		await addNoteToThread(
+			thread.id,
+			guildId,
+			interaction.user.id,
+			interaction.user.tag,
+			noteContent
+		);
 
 		await interaction.reply({
 			content: `✅ Internal note added to thread.`,

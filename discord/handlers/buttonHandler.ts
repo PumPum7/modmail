@@ -6,7 +6,8 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 	if (!interaction.customId.startsWith('quick_reply_')) return;
 
 	const macroName = interaction.customId.replace('quick_reply_', '');
-	const thread = await getThreadByChannelId(interaction.channelId);
+	const guildId = interaction.guildId!;
+	const thread = await getThreadByChannelId(interaction.channelId, guildId);
 
 	if (!thread) {
 		await interaction.reply({
@@ -17,7 +18,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 	}
 
 	try {
-		const macro = await getMacroByName(macroName);
+		const macro = await getMacroByName(macroName, guildId);
 
 		if (!macro) {
 			await interaction.reply({
@@ -35,6 +36,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction, cl
 		// Add to thread
 		await addMessageToThread(
 			thread.id,
+			guildId,
 			interaction.user.id,
 			interaction.user.tag,
 			`[QUICK REPLY: ${macroName}] ${macro.content}`

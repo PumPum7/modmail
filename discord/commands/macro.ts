@@ -12,22 +12,23 @@ import { createModeratorMessageEmbed, createConfirmationEmbed } from '../utils.j
 
 export async function handleMacroCommand(interaction: ChatInputCommandInteraction, client: Client) {
 	const subcommand = interaction.options.getSubcommand();
+	const guildId = interaction.guildId!;
 
 	switch (subcommand) {
 		case 'create':
-			await handleMacroCreate(interaction);
+			await handleMacroCreate(interaction, guildId);
 			break;
 		case 'send':
-			await handleMacroSend(interaction, client);
+			await handleMacroSend(interaction, client, guildId);
 			break;
 		case 'delete':
-			await handleMacroDelete(interaction);
+			await handleMacroDelete(interaction, guildId);
 			break;
 		case 'list':
-			await handleMacroList(interaction);
+			await handleMacroList(interaction, guildId);
 			break;
 		case 'edit':
-			await handleMacroEdit(interaction);
+			await handleMacroEdit(interaction, guildId);
 			break;
 		default:
 			await interaction.reply({
@@ -38,12 +39,12 @@ export async function handleMacroCommand(interaction: ChatInputCommandInteractio
 	}
 }
 
-async function handleMacroCreate(interaction: ChatInputCommandInteraction) {
+async function handleMacroCreate(interaction: ChatInputCommandInteraction, guildId: string) {
 	const name = interaction.options.getString('name', true);
 	const content = interaction.options.getString('content', true);
 
 	try {
-		await createMacro(name, content);
+		await createMacro(name, content, guildId);
 		await interaction.reply({
 			content: `✅ Macro "${name}" created successfully.`,
 			flags: MessageFlagsBitField.Flags.Ephemeral,
@@ -56,9 +57,13 @@ async function handleMacroCreate(interaction: ChatInputCommandInteraction) {
 	}
 }
 
-async function handleMacroSend(interaction: ChatInputCommandInteraction, client: Client) {
+async function handleMacroSend(
+	interaction: ChatInputCommandInteraction,
+	client: Client,
+	guildId: string
+) {
 	const macroName = interaction.options.getString('name', true);
-	const macro = await getMacroByName(macroName);
+	const macro = await getMacroByName(macroName, guildId);
 
 	if (!macro) {
 		await interaction.reply({
@@ -68,7 +73,7 @@ async function handleMacroSend(interaction: ChatInputCommandInteraction, client:
 		return;
 	}
 
-	const thread = await getThreadByChannelId(interaction.channelId);
+	const thread = await getThreadByChannelId(interaction.channelId, guildId);
 
 	if (!thread) {
 		await interaction.reply({
@@ -87,6 +92,7 @@ async function handleMacroSend(interaction: ChatInputCommandInteraction, client:
 		// Add to thread
 		await addMessageToThread(
 			thread.id,
+			guildId,
 			interaction.user.id,
 			interaction.user.tag,
 			`[MACRO: ${macroName}] ${macro.content}`
@@ -109,11 +115,11 @@ async function handleMacroSend(interaction: ChatInputCommandInteraction, client:
 	}
 }
 
-async function handleMacroDelete(interaction: ChatInputCommandInteraction) {
+async function handleMacroDelete(interaction: ChatInputCommandInteraction, guildId: string) {
 	const deleteNameParam = interaction.options.getString('name', true);
 
 	try {
-		const result = await deleteMacro(deleteNameParam);
+		const result = await deleteMacro(deleteNameParam, guildId);
 
 		if (result.success) {
 			await interaction.reply({
@@ -135,9 +141,9 @@ async function handleMacroDelete(interaction: ChatInputCommandInteraction) {
 	}
 }
 
-async function handleMacroList(interaction: ChatInputCommandInteraction) {
+async function handleMacroList(interaction: ChatInputCommandInteraction, guildId: string) {
 	try {
-		const macros = await getMacros();
+		const macros = await getMacros(guildId);
 		await interaction.reply({
 			content: `✅ Macros: ${macros.map((m) => m.name).join(', ')}`,
 			flags: MessageFlagsBitField.Flags.Ephemeral,
@@ -151,12 +157,12 @@ async function handleMacroList(interaction: ChatInputCommandInteraction) {
 	}
 }
 
-async function handleMacroEdit(interaction: ChatInputCommandInteraction) {
+async function handleMacroEdit(interaction: ChatInputCommandInteraction, guildId: string) {
 	const editNameParam = interaction.options.getString('name', true);
 	const editContent = interaction.options.getString('content', true);
 
 	try {
-		await editMacro(editNameParam, editContent);
+		await editMacro(editNameParam, editContent, guildId);
 		await interaction.reply({
 			content: `✅ Macro "${editNameParam}" edited successfully.`,
 			flags: MessageFlagsBitField.Flags.Ephemeral,

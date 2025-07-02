@@ -1,11 +1,5 @@
 import { redirect } from '@sveltejs/kit';
-import {
-	exchangeCodeForTokens,
-	getDiscordUser,
-	getGuildMember,
-	isModerator,
-	createJWT
-} from '$lib/auth';
+import { exchangeCodeForTokens, getDiscordUser, createJWT } from '$lib/auth';
 import type { RequestHandler } from './$types';
 import { serialize } from 'cookie';
 
@@ -24,29 +18,15 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		// Get user info
 		const discordUser = await getDiscordUser(tokens.access_token);
 
-		// Get guild member info to check roles
-		const guildMember = await getGuildMember(tokens.access_token, discordUser.id);
-
-		if (!guildMember) {
-			throw redirect(302, '/login?error=not_member');
-		}
-
-		// Check if user is a moderator
-		const userIsModerator = isModerator(guildMember.roles);
-
-		if (!userIsModerator) {
-			throw redirect(302, '/login?error=not_moderator');
-		}
-
-		// Create JWT with user info
+		// Create JWT with user info and access token for guild fetching
 		const userPayload = {
 			id: discordUser.id,
 			username: discordUser.username,
 			discriminator: discordUser.discriminator,
 			avatar: discordUser.avatar,
 			email: discordUser.email,
-			roles: guildMember.roles,
-			isModerator: true
+			access_token: tokens.access_token,
+			isModerator: true // Will be verified per-guild
 		};
 
 		const jwt = createJWT(userPayload);
@@ -63,7 +43,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		const response = new Response(null, {
 			status: 302,
 			headers: {
-				Location: '/',
+				Location: '/select-server',
 				'Set-Cookie': cookie
 			}
 		});

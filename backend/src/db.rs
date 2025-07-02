@@ -9,6 +9,7 @@ pub struct Message {
     pub author_tag: String,
     pub content: String,
     pub attachments: serde_json::Value,
+    pub guild_id: String,
     #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -20,6 +21,7 @@ pub struct Thread {
     pub thread_id: String,
     pub is_open: bool,
     pub urgency: String,
+    pub guild_id: String,
     #[serde(with = "chrono::serde::ts_seconds_option")]
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(with = "chrono::serde::ts_seconds_option")]
@@ -32,6 +34,7 @@ pub struct Macro {
     pub name: String,
     pub content: String,
     pub quick_access: bool,
+    pub guild_id: String,
 }
 
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
@@ -41,6 +44,7 @@ pub struct Note {
     pub author_id: String,
     pub author_tag: String,
     pub content: String,
+    pub guild_id: String,
     #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -53,6 +57,7 @@ pub struct BlockedUser {
     pub blocked_by: String,
     pub blocked_by_tag: String,
     pub reason: Option<String>,
+    pub guild_id: String,
     #[serde(with = "chrono::serde::ts_seconds")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }

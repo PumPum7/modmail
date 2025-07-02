@@ -1,59 +1,63 @@
 import type { PageServerLoad, Actions } from './$types';
 import { api } from '$lib/api';
-import { fail } from '@sveltejs/kit';
+import { fail, redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ locals, cookies, url }) => {
+	const user = locals.user;
+	const selectedGuildId = cookies.get('selected_guild_id');
+
+	if (!user) {
+		throw redirect(302, '/login');
+	}
+
+	if (!selectedGuildId) {
+		throw redirect(302, '/select-server');
+	}
+
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
 
-		const data = await api.getAllThreads(page, limit);
+		const threadsResponse = await api.getAllThreads(selectedGuildId, page, limit);
+
 		return {
-			threads: data.threads,
-			pagination: data.pagination
+			threads: threadsResponse.threads,
+			pagination: threadsResponse.pagination,
+			user
 		};
 	} catch (error) {
 		console.error('Error loading threads:', error);
 		return {
 			threads: [],
-			pagination: {
-				page: 1,
-				limit: 20,
-				total_count: 0,
-				total_pages: 0,
-				has_next: false,
-				has_prev: false
-			},
-			error: 'Failed to load threads'
+			pagination: null,
+			error: 'Failed to load threads',
+			user
 		};
 	}
 };
 
 export const actions: Actions = {
-	closeThread: async ({ request, locals: { user } }) => {
-		if (!user) {
-			return fail(401, { error: 'Authentication required' });
-		}
-		if (!user.isModerator) {
-			return fail(403, { error: 'Moderator access required' });
-		}
+	closeThread: async ({ request, locals, cookies }) => {
+		const user = locals.user;
+		const selectedGuildId = cookies.get('selected_guild_id');
 
-		const data = await request.formData();
-		const threadId = data.get('id')?.toString();
-
-		if (!threadId) {
-			return fail(400, { error: 'Thread ID is required' });
+		if (!user || !selectedGuildId) {
+			return { error: 'Not authenticated or no server selected' };
 		}
 
 		try {
-			await api.closeThread(parseInt(threadId), {
+			const data = await request.formData();
+			const threadId = parseInt(data.get('id') as string);
+
+			await api.closeThread(selectedGuildId, threadId, {
 				id: user.id,
-				tag: user.username
+				tag: `${user.username}#${user.discriminator}`
 			});
-			return { success: 'Thread closed successfully!' };
+
+			return { success: 'Thread closed successfully' };
 		} catch (error) {
-			console.error('Failed to close thread:', error);
-			return fail(500, { error: 'Failed to close thread' });
+			console.error('Error closing thread:', error);
+			return { error: 'Failed to close thread' };
 		}
 	}
 };

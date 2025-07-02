@@ -34,7 +34,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
 	} else if (interaction.isButton()) {
 		// Handle intro button clicks
 		if (interaction.customId.startsWith('start_intro_')) {
-			const userId = interaction.customId.replace('start_intro_', '');
+			const parts = interaction.customId.replace('start_intro_', '').split('_');
+			const userId = parts[0];
+			const guildId = parts[1];
 
 			// Verify this is the correct user
 			if (interaction.user.id !== userId) {
@@ -46,7 +48,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 			}
 
 			const { createIntroModal } = await import('./utils.js');
-			const modal = createIntroModal(userId);
+			const modal = createIntroModal(`${userId}_${guildId}`);
 
 			try {
 				await interaction.showModal(modal);
@@ -66,10 +68,61 @@ client.on(Events.InteractionCreate, async (interaction) => {
 			// Handle other button interactions (quick replies, etc.)
 			await handleButtonInteraction(interaction, client);
 		}
+	} else if (interaction.isStringSelectMenu()) {
+		// Handle server selection
+		if (interaction.customId.startsWith('server_select_')) {
+			const parts = interaction.customId.split('_');
+			const type = parts[2]; // 'new' or 'existing'
+			const userId = parts[3];
+
+			// Verify this is the correct user
+			if (interaction.user.id !== userId) {
+				await interaction.reply({
+					content: '❌ This selection is not for you.',
+					flags: MessageFlagsBitField.Flags.Ephemeral,
+				});
+				return;
+			}
+
+			const selectedGuildId = interaction.values[0];
+
+			try {
+				if (type === 'existing') {
+					// Continue existing thread
+					const { getThreadByUserId } = await import('./api.js');
+					const thread = await getThreadByUserId(userId, selectedGuildId);
+
+					if (thread) {
+						await interaction.reply({
+							content: `✅ Continuing conversation with **${interaction.guild?.name || 'Selected Server'}**. You can now send your message.`,
+							flags: MessageFlagsBitField.Flags.Ephemeral,
+						});
+					} else {
+						await interaction.reply({
+							content: '❌ Thread not found. Please try again.',
+							flags: MessageFlagsBitField.Flags.Ephemeral,
+						});
+					}
+				} else {
+					// Start new conversation - show intro modal
+					const { createIntroModal } = await import('./utils.js');
+					const modal = createIntroModal(`${userId}_${selectedGuildId}`);
+					await interaction.showModal(modal);
+				}
+			} catch (error) {
+				console.error('Error handling server selection:', error);
+				await interaction.reply({
+					content: '❌ There was an error processing your selection. Please try again.',
+					flags: MessageFlagsBitField.Flags.Ephemeral,
+				});
+			}
+		}
 	} else if (interaction.isModalSubmit()) {
 		// Handle intro modal submissions
 		if (interaction.customId.startsWith('intro_modal_')) {
-			const userId = interaction.customId.replace('intro_modal_', '');
+			const parts = interaction.customId.replace('intro_modal_', '').split('_');
+			const userId = parts[0];
+			const guildId = parts[1];
 
 			// Verify this is the correct user
 			if (interaction.user.id !== userId) {
@@ -102,7 +155,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 					attachments: new Map(),
 				};
 
-				const result = await createThreadForUser(mockMessage as any, client, introData);
+				const result = await createThreadForUser(mockMessage as any, client, guildId, introData);
 
 				if (result) {
 					const { thread } = result;
@@ -111,6 +164,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 					const { addMessageToThread } = await import('./api.js');
 					await addMessageToThread(
 						thread.id,
+						guildId,
 						interaction.user.id,
 						interaction.user.tag,
 						`[INTRO FORM]\n**Subject:** ${subject}\n**Description:** ${description}\n**Priority:** ${urgency}`
@@ -123,7 +177,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 					});
 
 					console.log(
-						`Created thread ${thread.id} for user ${interaction.user.tag} (${interaction.user.id}) via intro form`
+						`Created thread ${thread.id} for user ${interaction.user.tag} (${interaction.user.id}) via intro form in guild ${guildId}`
 					);
 				} else {
 					throw new Error('Failed to create thread');

@@ -2,7 +2,13 @@ import { json } from '@sveltejs/kit';
 import { PUBLIC_BACKEND_URL } from '$env/static/public';
 import type { RequestHandler } from '@sveltejs/kit';
 
-export const POST: RequestHandler = async ({ params, fetch, locals }) => {
+export const POST: RequestHandler = async ({ params, fetch, locals, cookies }) => {
+	const selectedGuildId = cookies.get('selected_guild_id');
+
+	if (!selectedGuildId) {
+		return json({ error: 'No server selected' }, { status: 400 });
+	}
+
 	try {
 		const body = locals.user
 			? {
@@ -11,13 +17,16 @@ export const POST: RequestHandler = async ({ params, fetch, locals }) => {
 				}
 			: undefined;
 
-		const response = await fetch(`${PUBLIC_BACKEND_URL}/threads/${params.id}/close`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: body ? JSON.stringify(body) : undefined
-		});
+		const response = await fetch(
+			`${PUBLIC_BACKEND_URL}/guilds/${selectedGuildId}/threads/${params.id}/close`,
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: body ? JSON.stringify(body) : undefined
+			}
+		);
 
 		if (!response.ok) {
 			throw new Error('Failed to close thread');
