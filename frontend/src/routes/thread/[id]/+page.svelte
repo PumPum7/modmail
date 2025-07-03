@@ -56,7 +56,7 @@
 				return;
 			}
 
-			if (!data.user.isModerator) {
+			if (!data.user?.isModerator) {
 				goto('/login?error=not_moderator');
 				return;
 			}

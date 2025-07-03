@@ -11,7 +11,7 @@ declare global {
 				avatar: string | null;
 				email: string;
 				roles: string[];
-				isModerator: boolean;
+				isModerator?: boolean;
 			};
 		}
 		interface PageData {}

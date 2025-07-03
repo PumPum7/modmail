@@ -6,6 +6,7 @@ import { handleDirectMessage } from './handlers/dmHandler.js';
 import { handleChannelMessage } from './handlers/channelHandler.js';
 import { handleWebhookThreadClosed } from './webhookHandler.js';
 import { handleButtonInteraction } from './handlers/buttonHandler.js';
+import { handleGuildJoin } from './handlers/joinHandler.js';
 
 // Environment variables
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!;
@@ -90,7 +91,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 				if (type === 'existing') {
 					// Continue existing thread
 					const { getThreadByUserId } = await import('./api.js');
-					const thread = await getThreadByUserId(userId, selectedGuildId);
+					const thread = await getThreadByUserId(userId, selectedGuildId!);
 
 					if (thread) {
 						await interaction.reply({
@@ -155,7 +156,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 					attachments: new Map(),
 				};
 
-				const result = await createThreadForUser(mockMessage as any, client, guildId, introData);
+				const result = await createThreadForUser(mockMessage as any, client, guildId!, introData);
 
 				if (result) {
 					const { thread } = result;
@@ -164,7 +165,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 					const { addMessageToThread } = await import('./api.js');
 					await addMessageToThread(
 						thread.id,
-						guildId,
+						guildId!,
 						interaction.user.id,
 						interaction.user.tag,
 						`[INTRO FORM]\n**Subject:** ${subject}\n**Description:** ${description}\n**Priority:** ${urgency}`
@@ -202,6 +203,11 @@ client.on(Events.MessageCreate, async (message) => {
 // Handle messages in modmail channels (relay to user)
 client.on(Events.MessageCreate, async (message) => {
 	await handleChannelMessage(message, client);
+});
+
+client.on(Events.GuildCreate, async (guild) => {
+	console.log(`Joined guild: ${guild.name} (${guild.id})`);
+	await handleGuildJoin(guild, client);
 });
 
 // Create webhook server

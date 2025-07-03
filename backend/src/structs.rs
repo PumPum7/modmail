@@ -124,3 +124,22 @@ pub struct GuildConfig {
     #[serde(default)]
     pub updated_at: DateTime<Utc>,
 }
+
+// Guild validation structs
+#[derive(Deserialize)]
+pub struct ValidateGuildRequest {
+    pub guild_id: String,
+    pub guild_name: String,
+    pub guild_icon: Option<String>,
+    pub user_has_permissions: bool,
+}
+
+#[derive(Serialize)]
+pub struct ValidatedGuild {
+    pub guild_id: String,
+    pub guild_name: String,
+    pub guild_icon: Option<String>,
+    pub has_bot: bool,
+    pub has_config: bool,
+    pub user_has_permissions: bool,
+}

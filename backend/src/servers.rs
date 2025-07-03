@@ -1,4 +1,4 @@
-use crate::structs::{CreateServer, Server, UpdateServer};
+use crate::structs::{CreateServer, Server, UpdateServer, ValidateGuildRequest, ValidatedGuild};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -16,6 +16,7 @@ pub fn server_routes(db_pool: PgPool) -> Router {
             "/servers/:guild_id",
             get(get_server).put(update_server).delete(delete_server),
         )
+        .route("/validate-guilds", post(validate_user_guilds))
         .with_state(db_pool)
 }
 
@@ -110,4 +111,45 @@ async fn delete_server(
         Ok(_) => Err(StatusCode::NOT_FOUND), // No rows affected
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+// Validate which guilds a user can access (bot is present + user has permissions)
+async fn validate_user_guilds(
+    State(db_pool): State<PgPool>,
+    Json(payload): Json<Vec<ValidateGuildRequest>>,
+) -> Result<Json<Vec<ValidatedGuild>>, StatusCode> {
+    let mut validated_guilds = Vec::new();
+
+    for guild_request in payload {
+        // Check if guild exists in our servers table (bot is configured there)
+        let server_exists = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM servers WHERE guild_id = $1)",
+        )
+        .bind(&guild_request.guild_id)
+        .fetch_one(&db_pool)
+        .await
+        .unwrap_or(false);
+
+        if server_exists {
+            let config_exists = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM guild_configs WHERE guild_id = $1)",
+            )
+            .bind(&guild_request.guild_id)
+            .fetch_one(&db_pool)
+            .await
+            .unwrap_or(false);
+
+            // For now, if server exists in our DB, consider it valid
+            validated_guilds.push(ValidatedGuild {
+                guild_id: guild_request.guild_id,
+                guild_name: guild_request.guild_name,
+                guild_icon: guild_request.guild_icon,
+                has_bot: server_exists,
+                has_config: config_exists,
+                user_has_permissions: guild_request.user_has_permissions,
+            });
+        }
+    }
+
+    Ok(Json(validated_guilds))
 }

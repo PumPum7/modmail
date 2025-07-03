@@ -25,8 +25,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			discriminator: discordUser.discriminator,
 			avatar: discordUser.avatar,
 			email: discordUser.email,
-			access_token: tokens.access_token,
-			isModerator: true // Will be verified per-guild
+			access_token: tokens.access_token
 		};
 
 		const jwt = createJWT(userPayload);

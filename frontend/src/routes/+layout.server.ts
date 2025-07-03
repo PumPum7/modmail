@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { api } from '$lib/api';
-import { parseJWT } from '$lib/auth';
+import { parseJWT, isGuildModerator } from '$lib/auth';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) => {
@@ -19,6 +19,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) =>
 
 	let currentGuild = null;
 	let availableGuilds = [];
+	let userWithGuildInfo = user;
 
 	// Fetch current guild info and available guilds if user is authenticated
 	if (user && selectedGuildId) {
@@ -44,6 +45,40 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) =>
 
 						// Find current guild info
 						currentGuild = availableGuilds.find((guild: any) => guild.guild_id === selectedGuildId);
+
+						// Get user's member info for the selected guild to check moderator status
+						try {
+							const memberResponse = await fetch(
+								`https://discord.com/api/users/@me/guilds/${selectedGuildId}/member`,
+								{
+									headers: {
+										Authorization: `Bearer ${tokenUser.access_token}`
+									}
+								}
+							);
+
+							if (memberResponse.ok) {
+								const member = await memberResponse.json();
+								const isModerator = await isGuildModerator(
+									selectedGuildId,
+									member.roles,
+									tokenUser.access_token,
+									fetch
+								);
+
+								userWithGuildInfo = {
+									...user,
+									isModerator
+								};
+							}
+						} catch (memberError) {
+							console.error('Error fetching guild member info:', memberError);
+							// Fall back to no moderator privileges if we can't verify
+							userWithGuildInfo = {
+								...user,
+								isModerator: false
+							};
+						}
 					}
 				}
 			}
@@ -53,7 +88,7 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) =>
 	}
 
 	return {
-		user: user || null,
+		user: userWithGuildInfo || null,
 		selectedGuildId: selectedGuildId || null,
 		currentGuild,
 		availableGuilds

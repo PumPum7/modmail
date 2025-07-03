@@ -102,7 +102,7 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!user.isModerator) {
+		if (!user?.isModerator) {
 			return fail(403, {
 				error: 'Moderator access required'
 			});
@@ -149,7 +149,7 @@ export const actions: Actions = {
 		if (!user) {
 			return fail(401, { error: 'Authentication required' });
 		}
-		if (!user.isModerator) {
+		if (!user?.isModerator) {
 			return fail(403, { error: 'Moderator access required' });
 		}
 		if (!selectedGuildId) {

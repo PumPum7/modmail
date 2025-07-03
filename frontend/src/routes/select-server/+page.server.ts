@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { api } from '$lib/api';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
 	const authToken = cookies.get('auth_token');
 
 	if (!authToken) {
@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	}
 
 	try {
-		const guilds = await api.getUserGuilds();
+		const guilds = await api.getUserGuilds(url.origin, authToken);
 
 		if (guilds.length === 0) {
 			return {

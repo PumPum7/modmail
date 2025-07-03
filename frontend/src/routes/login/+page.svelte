@@ -11,7 +11,7 @@
 	});
 
 	function handleLogin() {
-		window.location.href = '/auth/discord';
+		window.location.href = '/api/auth/discord';
 	}
 </script>
 

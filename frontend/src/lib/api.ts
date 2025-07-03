@@ -404,10 +404,25 @@ export class ApiClient {
 		return response.json();
 	}
 
-	// New method to get user's available guilds
-	async getUserGuilds(): Promise<any[]> {
-		const response = await fetch(`${this.baseUrl}/auth/guilds`, {
-			credentials: 'include'
+	async getGuildConfig(guildId: string): Promise<any> {
+		const response = await fetch(`${this.baseUrl}/guilds/${guildId}/config`);
+		if (!response.ok || response.status !== 404) {
+			throw new Error('Failed to fetch guild config');
+		}
+
+		if (response.status === 404) {
+			return {};
+		}
+
+		return response.json();
+	}
+
+	async getUserGuilds(address: string, authToken: string): Promise<any[]> {
+		const response = await fetch(`${address}/api/auth/guilds`, {
+			credentials: 'include',
+			headers: {
+				Cookie: `auth_token=${authToken}`
+			}
 		});
 		if (!response.ok) {
 			throw new Error('Failed to fetch user guilds');

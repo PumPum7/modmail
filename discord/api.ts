@@ -226,3 +226,21 @@ export async function getUserServers(userId: string): Promise<any[]> {
 	}
 	return response.json() as Promise<any[]>;
 }
+
+// Server management functions
+export async function createServer(guildId: string, guildName: string): Promise<any> {
+	const response = await fetch(`${BACKEND_URL}/servers`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			guild_id: guildId,
+			guild_name: guildName,
+		}),
+	});
+
+	if (!response.ok) {
+		throw new Error(`Failed to create server: ${response.statusText}`);
+	}
+
+	return response.json();
+}

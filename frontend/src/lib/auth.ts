@@ -1,8 +1,8 @@
 import {
 	PUBLIC_DISCORD_CLIENT_ID,
 	PUBLIC_DISCORD_REDIRECT_URI,
-	PUBLIC_MOD_ROLE_IDS,
-	PUBLIC_DISCORD_SERVER_ID
+	PUBLIC_DISCORD_SERVER_ID,
+	PUBLIC_BACKEND_URL
 } from '$env/static/public';
 import { DISCORD_CLIENT_SECRET } from '$env/static/private';
 
@@ -25,7 +25,7 @@ export function getDiscordAuthUrl(): string {
 		client_id: PUBLIC_DISCORD_CLIENT_ID,
 		redirect_uri: PUBLIC_DISCORD_REDIRECT_URI,
 		response_type: 'code',
-		scope: 'identify email guilds.members.read'
+		scope: 'identify email guilds.members.read guilds'
 	});
 
 	return `https://discord.com/oauth2/authorize?${params.toString()}`;
@@ -95,9 +95,55 @@ export async function getGuildMember(
 	}
 }
 
-export function isModerator(roles: string[]): boolean {
-	const modRoleIds = PUBLIC_MOD_ROLE_IDS.split(',').map((id) => id.trim());
-	return roles.some((role) => modRoleIds.includes(role));
+export function isModerator(roles: string[], moderatorRoleIds: string[] = []): boolean {
+	if (moderatorRoleIds.length === 0) {
+		return false;
+	}
+	return roles.some((role) => moderatorRoleIds.includes(role));
+}
+
+export async function isGuildModerator(
+	guildId: string,
+	userRoles: string[],
+	accessToken: string,
+	fetch: typeof globalThis.fetch
+): Promise<boolean> {
+	try {
+		// Get guild config to check moderator roles
+		const configResponse = await fetch(`${PUBLIC_BACKEND_URL}/guilds/${guildId}/config`);
+
+		if (!configResponse.ok) {
+			// If no guild config exists, fall back to Discord permissions check
+			const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+				headers: {
+					Authorization: `Bearer ${accessToken}`
+				}
+			});
+
+			if (guildsResponse.ok) {
+				const guilds = await guildsResponse.json();
+				const guild = guilds.find((g: any) => g.id === guildId);
+
+				if (guild) {
+					// Check if user has administrator or manage guild permissions
+					const hasManagePermissions =
+						(guild.permissions & 0x20) === 0x20 || // MANAGE_GUILD
+						(guild.permissions & 0x8) === 0x8; // ADMINISTRATOR
+					return hasManagePermissions;
+				}
+			}
+
+			return false;
+		}
+
+		const guildConfig = await configResponse.json();
+		const moderatorRoleIds = guildConfig.moderator_role_ids || [];
+
+		return isModerator(userRoles, moderatorRoleIds);
+	} catch (error) {
+		console.error('Error checking guild moderator status:', error);
+		return false;
+	}
 }
 
 export function createJWT(payload: Record<string, any>): string {
