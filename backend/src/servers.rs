@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::structs::{
     CreateServer, GuildConfig, Server, UpdateServer, ValidateGuildRequest, ValidatedGuild,
 };
@@ -23,47 +24,41 @@ pub fn server_routes(db_pool: PgPool) -> Router {
 }
 
 // Get all servers (for a user, you might add authentication and filtering here)
-async fn get_servers(State(db_pool): State<PgPool>) -> Result<Json<Vec<Server>>, StatusCode> {
-    match sqlx::query_as::<_, Server>("SELECT * FROM servers")
+async fn get_servers(State(db_pool): State<PgPool>) -> Result<Json<Vec<Server>>, AppError> {
+    let servers = sqlx::query_as::<_, Server>("SELECT * FROM servers")
         .fetch_all(&db_pool)
-        .await
-    {
-        Ok(servers) => Ok(Json(servers)),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+        .await?;
+    Ok(Json(servers))
 }
 
 // Create a new server
 async fn create_server(
     State(db_pool): State<PgPool>,
     Json(payload): Json<CreateServer>,
-) -> Result<Json<Server>, StatusCode> {
-    match sqlx::query_as::<_, Server>(
+) -> Result<Json<Server>, AppError> {
+    let server = sqlx::query_as::<_, Server>(
         "INSERT INTO servers (guild_id, guild_name) VALUES ($1, $2) RETURNING *",
     )
     .bind(payload.guild_id)
     .bind(payload.guild_name)
     .fetch_one(&db_pool)
-    .await
-    {
-        Ok(server) => Ok(Json(server)),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    .await?;
+    Ok(Json(server))
 }
 
 // Get a specific server by guild_id
 async fn get_server(
     State(db_pool): State<PgPool>,
     Path(guild_id): Path<String>,
-) -> Result<Json<Server>, StatusCode> {
-    match sqlx::query_as::<_, Server>("SELECT * FROM servers WHERE guild_id = $1")
+) -> Result<Json<Server>, AppError> {
+    let server = sqlx::query_as::<_, Server>("SELECT * FROM servers WHERE guild_id = $1")
         .bind(guild_id)
         .fetch_optional(&db_pool)
-        .await
-    {
-        Ok(Some(server)) => Ok(Json(server)),
-        Ok(None) => Err(StatusCode::NOT_FOUND),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        .await?;
+    if let Some(server) = server {
+        Ok(Json(server))
+    } else {
+        Err(AppError::Anyhow(anyhow::anyhow!("Server not found")))
     }
 }
 
@@ -72,11 +67,11 @@ async fn update_server(
     State(db_pool): State<PgPool>,
     Path(guild_id): Path<String>,
     Json(payload): Json<UpdateServer>,
-) -> Result<Json<Server>, StatusCode> {
+) -> Result<Json<Server>, AppError> {
     // Fetch the current server details to have a complete object to return
     let current_server = match get_server(State(db_pool.clone()), Path(guild_id.clone())).await {
         Ok(Json(server)) => server,
-        Err(status) => return Err(status),
+        Err(e) => return Err(e),
     };
 
     let guild_name = payload.guild_name.unwrap_or(current_server.guild_name);
@@ -84,7 +79,7 @@ async fn update_server(
     let max_threads = payload.max_threads.unwrap_or(current_server.max_threads);
     let max_macros = payload.max_macros.unwrap_or(current_server.max_macros);
 
-    match sqlx::query_as::<_, Server>(
+    let server = sqlx::query_as::<_, Server>(
         "UPDATE servers SET guild_name = $1, is_premium = $2, max_threads = $3, max_macros = $4, updated_at = NOW() WHERE guild_id = $5 RETURNING *"
     )
     .bind(guild_name)
@@ -93,25 +88,24 @@ async fn update_server(
     .bind(max_macros)
     .bind(guild_id)
     .fetch_one(&db_pool)
-    .await {
-        Ok(server) => Ok(Json(server)),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    .await?;
+    Ok(Json(server))
 }
 
 // Delete a server
 async fn delete_server(
     State(db_pool): State<PgPool>,
     Path(guild_id): Path<String>,
-) -> Result<StatusCode, StatusCode> {
-    match sqlx::query("DELETE FROM servers WHERE guild_id = $1")
+) -> Result<StatusCode, AppError> {
+    let result = sqlx::query("DELETE FROM servers WHERE guild_id = $1")
         .bind(guild_id)
         .execute(&db_pool)
-        .await
-    {
-        Ok(result) if result.rows_affected() > 0 => Ok(StatusCode::NO_CONTENT),
-        Ok(_) => Err(StatusCode::NOT_FOUND), // No rows affected
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        .await?;
+
+    if result.rows_affected() > 0 {
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(AppError::Anyhow(anyhow::anyhow!("Server not found")))
     }
 }
 
@@ -119,7 +113,7 @@ async fn delete_server(
 async fn validate_user_guilds(
     State(db_pool): State<PgPool>,
     Json(payload): Json<Vec<ValidateGuildRequest>>,
-) -> Result<Json<Vec<ValidatedGuild>>, StatusCode> {
+) -> Result<Json<Vec<ValidatedGuild>>, AppError> {
     // Collect all guild_ids from the user
     let user_guild_ids: Vec<String> = payload.iter().map(|g| g.guild_id.clone()).collect();
     if user_guild_ids.is_empty() {
@@ -130,8 +124,7 @@ async fn validate_user_guilds(
     let rows = sqlx::query_as::<_, Server>("SELECT guild_id FROM servers WHERE guild_id = ANY($1)")
         .bind(&user_guild_ids)
         .fetch_all(&db_pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .await?;
     let bot_guild_ids: std::collections::HashSet<String> =
         rows.iter().map(|r| r.guild_id.clone()).collect();
 
@@ -141,8 +134,7 @@ async fn validate_user_guilds(
     )
     .bind(&user_guild_ids)
     .fetch_all(&db_pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .await?;
     let config_guild_ids: std::collections::HashSet<String> =
         config_rows.into_iter().map(|r| r.guild_id).collect();
 

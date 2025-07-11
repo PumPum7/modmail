@@ -1,9 +1,9 @@
+use crate::errors::AppError;
 use crate::structs::{CreateGuildConfig, GuildConfig, UpdateGuildConfig};
 use axum::{
-    extract::{Json, Path, State},
-    http::StatusCode,
+    extract::{Path, State},
     routing::get,
-    Router,
+    Json, Router,
 };
 use sqlx::PgPool;
 
@@ -23,15 +23,16 @@ pub fn guild_config_routes(db_pool: PgPool) -> Router {
 async fn get_guild_config(
     State(db_pool): State<PgPool>,
     Path(guild_id): Path<String>,
-) -> Result<Json<GuildConfig>, StatusCode> {
-    match sqlx::query_as::<_, GuildConfig>("SELECT * FROM guild_configs WHERE guild_id = $1")
-        .bind(guild_id)
-        .fetch_optional(&db_pool)
-        .await
-    {
-        Ok(Some(config)) => Ok(Json(config)),
-        Ok(None) => Err(StatusCode::NOT_FOUND),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+) -> Result<Json<GuildConfig>, AppError> {
+    let config =
+        sqlx::query_as::<_, GuildConfig>("SELECT * FROM guild_configs WHERE guild_id = $1")
+            .bind(guild_id)
+            .fetch_optional(&db_pool)
+            .await?;
+    if let Some(config) = config {
+        Ok(Json(config))
+    } else {
+        Err(AppError::Anyhow(anyhow::anyhow!("Config not found")))
     }
 }
 
@@ -40,8 +41,8 @@ async fn create_guild_config(
     State(db_pool): State<PgPool>,
     Path(guild_id): Path<String>,
     Json(payload): Json<CreateGuildConfig>,
-) -> Result<Json<GuildConfig>, StatusCode> {
-    match sqlx::query_as::<_, GuildConfig>(
+) -> Result<Json<GuildConfig>, AppError> {
+    let config = sqlx::query_as::<_, GuildConfig>(
         "INSERT INTO guild_configs (guild_id, modmail_category_id, log_channel_id, randomize_names, auto_close_hours, welcome_message, moderator_role_ids, blocked_words) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *"
     )
     .bind(guild_id)
@@ -53,10 +54,8 @@ async fn create_guild_config(
     .bind(payload.moderator_role_ids.unwrap_or_default())
     .bind(payload.blocked_words.unwrap_or_default())
     .fetch_one(&db_pool)
-    .await {
-        Ok(config) => Ok(Json(config)),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    .await?;
+    Ok(Json(config))
 }
 
 // Update guild configuration
@@ -64,11 +63,11 @@ async fn update_guild_config(
     State(db_pool): State<PgPool>,
     Path(guild_id): Path<String>,
     Json(payload): Json<UpdateGuildConfig>,
-) -> Result<Json<GuildConfig>, StatusCode> {
+) -> Result<Json<GuildConfig>, AppError> {
     let current_config =
         match get_guild_config(State(db_pool.clone()), Path(guild_id.clone())).await {
             Ok(Json(config)) => config,
-            Err(status) => return Err(status),
+            Err(e) => return Err(e),
         };
 
     let modmail_category_id = payload
@@ -87,7 +86,7 @@ async fn update_guild_config(
         .blocked_words
         .unwrap_or(current_config.blocked_words);
 
-    match sqlx::query_as::<_, GuildConfig>(
+    let config = sqlx::query_as::<_, GuildConfig>(
         "UPDATE guild_configs SET modmail_category_id = $1, log_channel_id = $2, randomize_names = $3, auto_close_hours = $4, welcome_message = $5, moderator_role_ids = $6, blocked_words = $7, updated_at = NOW() WHERE guild_id = $8 RETURNING *"
     )
     .bind(modmail_category_id)
@@ -99,8 +98,6 @@ async fn update_guild_config(
     .bind(blocked_words)
     .bind(guild_id)
     .fetch_one(&db_pool)
-    .await {
-        Ok(config) => Ok(Json(config)),
-        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    .await?;
+    Ok(Json(config))
 }

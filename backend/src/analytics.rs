@@ -1,7 +1,8 @@
+use crate::errors::AppError;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
@@ -71,19 +72,17 @@ struct ResponseTimeMetrics {
 async fn get_analytics_overview(
     State(pool): State<PgPool>,
     Path(guild_id): Path<String>,
-) -> Response {
+) -> Result<impl IntoResponse, AppError> {
     let total_threads: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM threads WHERE guild_id = $1")
         .bind(guild_id.clone())
         .fetch_one(&pool)
-        .await
-        .unwrap_or(0);
+        .await?;
 
     let open_threads: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM threads WHERE is_open = true AND guild_id = $1")
             .bind(guild_id.clone())
             .fetch_one(&pool)
-            .await
-            .unwrap_or(0);
+            .await?;
 
     let closed_threads = total_threads - open_threads;
 
@@ -93,24 +92,21 @@ async fn get_analytics_overview(
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .unwrap_or(0);
+    .await?;
 
     let threads_this_week: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '7 days'"
+        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '7 days'",
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .unwrap_or(0);
+    .await?;
 
     let threads_this_month: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '30 days'"
+        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '30 days'",
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .unwrap_or(0);
+    .await?;
 
     // Calculate average response time (hours between thread creation and first message)
     let avg_response_time_hours: Option<f64> = sqlx::query_scalar(
@@ -135,9 +131,7 @@ async fn get_analytics_overview(
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .ok()
-    .flatten();
+    .await?;
 
     let (total_messages, total_notes, blocked_users) = tokio::join!(
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM messages WHERE guild_id = $1")
@@ -164,11 +158,14 @@ async fn get_analytics_overview(
         threads_this_month,
     };
 
-    (StatusCode::OK, Json(overview)).into_response()
+    Ok((StatusCode::OK, Json(overview)))
 }
 
-async fn get_thread_volume(State(pool): State<PgPool>, Path(guild_id): Path<String>) -> Response {
-    let volume_data_result = sqlx::query_as::<_, ThreadVolumeData>(
+async fn get_thread_volume(
+    State(pool): State<PgPool>,
+    Path(guild_id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let volume_data = sqlx::query_as::<_, ThreadVolumeData>(
         r#"
         SELECT 
             DATE(created_at)::TEXT as "date",
@@ -181,23 +178,16 @@ async fn get_thread_volume(State(pool): State<PgPool>, Path(guild_id): Path<Stri
     )
     .bind(guild_id)
     .fetch_all(&pool)
-    .await;
+    .await?;
 
-    match volume_data_result {
-        Ok(data) => (StatusCode::OK, Json(data)).into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": "Failed to fetch thread volume" })),
-        )
-            .into_response(),
-    }
+    Ok((StatusCode::OK, Json(volume_data)))
 }
 
 async fn get_moderator_activity(
     State(pool): State<PgPool>,
     Path(guild_id): Path<String>,
-) -> Response {
-    let activity_data_result = sqlx::query_as::<_, ModeratorActivity>(
+) -> Result<impl IntoResponse, AppError> {
+    let activity_data = sqlx::query_as::<_, ModeratorActivity>(
         r#"
         SELECT 
             COALESCE(m.author_tag, n.author_tag, 'Unknown') as "moderator_tag",
@@ -221,19 +211,15 @@ async fn get_moderator_activity(
     )
     .bind(guild_id)
     .fetch_all(&pool)
-    .await;
+    .await?;
 
-    match activity_data_result {
-        Ok(activity_data) => (StatusCode::OK, Json(activity_data)).into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": "Failed to fetch moderator activity" })),
-        )
-            .into_response(),
-    }
+    Ok((StatusCode::OK, Json(activity_data)))
 }
 
-async fn get_response_times(State(pool): State<PgPool>, Path(guild_id): Path<String>) -> Response {
+async fn get_response_times(
+    State(pool): State<PgPool>,
+    Path(guild_id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
     // Calculate average first response time (hours between thread creation and first moderator message)
     let avg_first_response_hours: Option<f64> = sqlx::query_scalar(
         r#"
@@ -257,9 +243,7 @@ async fn get_response_times(State(pool): State<PgPool>, Path(guild_id): Path<Str
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .ok()
-    .flatten();
+    .await?;
 
     // Calculate average resolution time (hours between thread creation and closure)
     let avg_resolution_time_hours: Option<f64> = sqlx::query_scalar(
@@ -274,9 +258,7 @@ async fn get_response_times(State(pool): State<PgPool>, Path(guild_id): Path<Str
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .ok()
-    .flatten();
+    .await?;
 
     // Calculate median first response time
     let median_first_response_hours: Option<f64> = sqlx::query_scalar(
@@ -300,9 +282,7 @@ async fn get_response_times(State(pool): State<PgPool>, Path(guild_id): Path<Str
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await
-    .ok()
-    .flatten();
+    .await?;
 
     let metrics = ResponseTimeMetrics {
         avg_first_response_hours,
@@ -310,12 +290,15 @@ async fn get_response_times(State(pool): State<PgPool>, Path(guild_id): Path<Str
         median_first_response_hours,
     };
 
-    (StatusCode::OK, Json(metrics)).into_response()
+    Ok((StatusCode::OK, Json(metrics)))
 }
 
-async fn refresh_analytics(State(pool): State<PgPool>, Path(guild_id): Path<String>) -> Response {
+async fn refresh_analytics(
+    State(pool): State<PgPool>,
+    Path(guild_id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
     // For now, we can use this to validate data integrity and return basic stats
-    let validation_result = sqlx::query(
+    sqlx::query(
         r#"
         SELECT 
             COUNT(DISTINCT t.id) as total_threads,
@@ -329,25 +312,14 @@ async fn refresh_analytics(State(pool): State<PgPool>, Path(guild_id): Path<Stri
     )
     .bind(guild_id.clone())
     .fetch_one(&pool)
-    .await;
+    .await?;
 
-    match validation_result {
-        Ok(_) => (
-            StatusCode::OK,
-            Json(serde_json::json!({
-                "success": "Analytics refreshed successfully",
-                "guild_id": guild_id,
-                "timestamp": chrono::Utc::now().to_rfc3339()
-            })),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({
-                "error": "Failed to refresh analytics",
-                "details": e.to_string()
-            })),
-        )
-            .into_response(),
-    }
+    Ok((
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "success": "Analytics refreshed successfully",
+            "guild_id": guild_id,
+            "timestamp": chrono::Utc::now().to_rfc3339()
+        })),
+    ))
 }

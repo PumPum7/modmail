@@ -3,10 +3,13 @@ use dotenv::dotenv;
 use std::env;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod analytics;
 mod blocked_users;
 mod db;
+mod errors;
 mod guild_configs;
 mod macros;
 mod messages;
@@ -15,16 +18,25 @@ mod servers;
 mod structs;
 mod threads;
 
-async fn health_check() -> String {
-    "OK".to_string()
+use crate::errors::AppError;
+
+async fn health_check() -> Result<String, AppError> {
+    Ok("OK".to_string())
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     dotenv().ok();
 
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "backend=debug,tower_http=debug".into()),
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = db::connect(&database_url).await.unwrap();
+    let pool = db::connect(&database_url).await?;
 
     let app = Router::new()
         .route("/health", get(health_check))
@@ -41,11 +53,13 @@ async fn main() {
                 .allow_origin(Any)
                 .allow_methods(Any)
                 .allow_headers(Any),
-        );
+        )
+        .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await?;
+
+    Ok(())
 }
