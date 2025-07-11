@@ -17,7 +17,7 @@ use uuid::Uuid;
 pub fn note_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/threads/:thread_id/notes",
+            "/guilds/{guild_id}/threads/{thread_id}/notes",
             get(get_thread_notes).post(add_note_to_thread),
         )
         .with_state(db_pool)

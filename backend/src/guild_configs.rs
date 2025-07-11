@@ -14,7 +14,7 @@ use diesel::prelude::*;
 pub fn guild_config_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/config",
+            "/guilds/{guild_id}/config",
             get(get_guild_config)
                 .put(update_guild_config)
                 .post(create_guild_config),
@@ -74,9 +74,9 @@ async fn update_guild_config(
     Json(payload): Json<UpdateGuildConfig>,
 ) -> Result<Json<GuildConfig>, AppError> {
     let mut conn = pool.get()?;
-    let target = guild_configs.filter(guild_id.eq(guild_id_path));
 
-    let updated_config = diesel::update(target)
+    let updated_config = diesel::update(guild_configs)
+        .filter(guild_id.eq(guild_id_path))
         .set(payload)
         .returning(GuildConfig::as_returning())
         .get_result(&mut conn)?;

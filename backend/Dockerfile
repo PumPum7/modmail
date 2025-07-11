@@ -5,6 +5,7 @@ FROM rust:1.87.0-slim AS builder
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
@@ -34,6 +35,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     curl \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -74,3 +76,5 @@ RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/ap
 USER appuser
 
 CMD ["/app/start.sh"]
+
+# TODO: diesel migration currently wont work

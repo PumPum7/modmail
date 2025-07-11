@@ -18,7 +18,7 @@ pub fn server_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route("/servers", post(create_server).get(get_servers))
         .route(
-            "/servers/:guild_id",
+            "/servers/{guild_id}",
             get(get_server).put(update_server).delete(delete_server),
         )
         .route("/validate-guilds", post(validate_user_guilds))

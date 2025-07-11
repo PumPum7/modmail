@@ -24,20 +24,20 @@ struct PaginationQuery {
 pub fn thread_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/threads",
+            "/guilds/{guild_id}/threads",
             get(get_threads).post(create_thread),
         )
-        .route("/guilds/:guild_id/threads/:thread_id", get(get_thread))
+        .route("/guilds/{guild_id}/threads/{thread_id}", get(get_thread))
         .route(
-            "/guilds/:guild_id/threads/:thread_id/close",
+            "/guilds/{guild_id}/threads/{thread_id}/close",
             post(close_thread),
         )
         .route(
-            "/guilds/:guild_id/threads/:thread_id/messages",
+            "/guilds/{guild_id}/threads/{thread_id}/messages",
             post(add_message_to_thread),
         )
         .route(
-            "/guilds/:guild_id/threads/:thread_id/urgency",
+            "/guilds/{guild_id}/threads/{thread_id}/urgency",
             put(update_thread_urgency),
         )
         .with_state(db_pool)

@@ -1,6 +1,9 @@
 use crate::db::DbPool;
 use crate::errors::AppError;
-use crate::models::{AnalyticsOverview, ModeratorActivity, ResponseTimeMetrics, ThreadVolumeData};
+use crate::models::{
+    AnalyticsOverview, CountResult, DoubleResult, ModeratorActivity, ResponseTimeMetrics,
+    ThreadVolumeData,
+};
 use crate::schema::{blocked_users, messages, notes, threads};
 use axum::{
     extract::{Path, State},
@@ -9,29 +12,30 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use diesel::dsl::now;
 use diesel::prelude::*;
 use diesel::sql_types::Text;
 
 pub fn analytics_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/analytics/overview",
+            "/guilds/{guild_id}/analytics/overview",
             get(get_analytics_overview),
         )
         .route(
-            "/guilds/:guild_id/analytics/thread-volume",
+            "/guilds/{guild_id}/analytics/thread-volume",
             get(get_thread_volume),
         )
         .route(
-            "/guilds/:guild_id/analytics/moderator-activity",
+            "/guilds/{guild_id}/analytics/moderator-activity",
             get(get_moderator_activity),
         )
         .route(
-            "/guilds/:guild_id/analytics/response-times",
+            "/guilds/{guild_id}/analytics/response-times",
             get(get_response_times),
         )
         .route(
-            "/guilds/:guild_id/analytics/refresh",
+            "/guilds/{guild_id}/analytics/refresh",
             post(refresh_analytics),
         )
         .with_state(db_pool)
@@ -61,21 +65,23 @@ async fn get_analytics_overview(
 
     let threads_today = threads::table
         .filter(threads::guild_id.eq(&guild_id_path))
-        .filter(threads::created_at.ge(Utc::now().date_naive()))
+        .filter(threads::created_at.ge(now))
         .count()
         .get_result(&mut conn)?;
 
     let threads_this_week: i64 = diesel::sql_query(
-        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '7 days'",
+        "SELECT COUNT(*) as count FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '7 days'",
     )
     .bind::<Text, _>(&guild_id_path)
-    .get_result(&mut conn)?;
+    .get_result::<CountResult>(&mut conn)?
+    .count;
 
     let threads_this_month: i64 = diesel::sql_query(
-        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '30 days'",
+        "SELECT COUNT(*) as count FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '30 days'",
     )
     .bind::<Text, _>(&guild_id_path)
-    .get_result(&mut conn)?;
+    .get_result::<CountResult>(&mut conn)?
+    .count;
 
     let avg_response_time_hours: Option<f64> = diesel::sql_query(
         r#"
@@ -92,13 +98,14 @@ async fn get_analytics_overview(
                 AND m.author_id != t.user_id
             GROUP BY t.id, t.created_at
         )
-        SELECT AVG(EXTRACT(EPOCH FROM (first_message - thread_created)) / 3600.0)
+        SELECT AVG(EXTRACT(EPOCH FROM (first_message - thread_created)) / 3600.0) as avg
         FROM first_responses
         WHERE first_message > thread_created
         "#,
     )
     .bind::<Text, _>(&guild_id_path)
-    .get_result(&mut conn)?;
+    .get_result::<DoubleResult>(&mut conn)?
+    .avg;
 
     let total_messages: i64 = messages::table
         .filter(messages::guild_id.eq(&guild_id_path))
@@ -206,17 +213,18 @@ async fn get_response_times(
                 AND m.author_id != t.user_id
             GROUP BY t.id, t.created_at
         )
-        SELECT AVG(EXTRACT(EPOCH FROM (first_response - thread_created)) / 3600.0)
+        SELECT AVG(EXTRACT(EPOCH FROM (first_response - thread_created)) / 3600.0) as avg
         FROM first_responses
         WHERE first_response > thread_created
         "#,
     )
     .bind::<Text, _>(&guild_id_path)
-    .get_result(&mut conn)?;
+    .get_result::<DoubleResult>(&mut conn)?
+    .avg;
 
     let avg_resolution_time_hours: Option<f64> = diesel::sql_query(
         r#"
-        SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600.0)
+        SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600.0) as avg
         FROM threads
         WHERE is_open = false 
             AND guild_id = $1 
@@ -224,7 +232,8 @@ async fn get_response_times(
         "#,
     )
     .bind::<Text, _>(&guild_id_path)
-    .get_result(&mut conn)?;
+    .get_result::<DoubleResult>(&mut conn)?
+    .avg;
 
     let median_first_response_hours: Option<f64> = diesel::sql_query(
         r#"
@@ -240,13 +249,14 @@ async fn get_response_times(
                 AND m.author_id != t.user_id
             GROUP BY t.id, t.created_at
         )
-        SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response - thread_created)) / 3600.0)
+        SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response - thread_created)) / 3600.0) as avg
         FROM first_responses
         WHERE first_response > thread_created
         "#,
     )
     .bind::<Text, _>(guild_id_path)
-    .get_result(&mut conn)?;
+    .get_result::<DoubleResult>(&mut conn)?
+    .avg;
 
     let metrics = ResponseTimeMetrics {
         avg_first_response_hours,

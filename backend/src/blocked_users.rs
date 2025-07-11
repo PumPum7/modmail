@@ -16,11 +16,11 @@ use diesel::prelude::*;
 pub fn blocked_user_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/blocked-users",
+            "/guilds/{guild_id}/blocked-users",
             get(get_blocked_users).post(block_user),
         )
         .route(
-            "/guilds/:guild_id/blocked-users/:user_id",
+            "/guilds/{guild_id}/blocked-users/{user_id}",
             delete(unblock_user).get(is_user_blocked),
         )
         .with_state(db_pool)

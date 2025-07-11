@@ -17,7 +17,7 @@ use uuid::Uuid;
 pub fn message_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/messages",
+            "/guilds/{guild_id}/messages",
             get(get_messages).post(create_message),
         )
         .with_state(db_pool)

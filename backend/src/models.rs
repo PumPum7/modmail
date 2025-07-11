@@ -2,6 +2,7 @@
 use crate::schema::{blocked_users, guild_configs, macros, messages, notes, servers, threads};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
+use diesel::sql_types::{BigInt, Double, Integer, Nullable, Text};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -144,7 +145,7 @@ pub struct NewServer<'a> {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Queryable, Selectable, Serialize, Deserialize, Clone)]
+#[derive(Queryable, Selectable, Serialize, Deserialize, Clone, QueryableByName)]
 #[diesel(table_name = guild_configs)]
 pub struct GuildConfig {
     pub id: i32,
@@ -190,8 +191,7 @@ pub struct AnalyticsOverview {
     pub threads_this_month: i64,
 }
 
-#[derive(Queryable, Serialize, Deserialize, Clone, Debug)]
-#[diesel(table_name = threads)]
+#[derive(Queryable, Serialize, Deserialize, Clone, Debug, QueryableByName)]
 pub struct ThreadVolumeData {
     #[diesel(sql_type = Text)]
     pub date: String,
@@ -199,8 +199,7 @@ pub struct ThreadVolumeData {
     pub count: i64,
 }
 
-#[derive(Queryable, Serialize, Deserialize, Clone, Debug)]
-#[diesel(table_name = messages)]
+#[derive(Queryable, Serialize, Deserialize, Clone, Debug, QueryableByName)]
 pub struct ModeratorActivity {
     #[diesel(sql_type = Text)]
     pub moderator_tag: String,
@@ -218,4 +217,17 @@ pub struct ResponseTimeMetrics {
     pub avg_first_response_hours: Option<f64>,
     pub avg_resolution_time_hours: Option<f64>,
     pub median_first_response_hours: Option<f64>,
+}
+
+// Wrapper structs for scalar SQL queries
+#[derive(QueryableByName)]
+pub struct CountResult {
+    #[diesel(sql_type = BigInt)]
+    pub count: i64,
+}
+
+#[derive(QueryableByName)]
+pub struct DoubleResult {
+    #[diesel(sql_type = Nullable<Double>)]
+    pub avg: Option<f64>,
 }

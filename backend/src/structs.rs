@@ -1,4 +1,4 @@
-use diesel::prelude::{AsChangeset, Identifiable};
+use diesel::prelude::AsChangeset;
 use serde::{Deserialize, Serialize};
 
 use crate::schema::guild_configs;
@@ -86,7 +86,8 @@ pub struct CreateGuildConfig {
     pub blocked_words: Option<Vec<String>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, AsChangeset)]
+#[diesel(table_name = guild_configs)]
 pub struct UpdateGuildConfig {
     pub modmail_category_id: Option<String>,
     pub log_channel_id: Option<String>,

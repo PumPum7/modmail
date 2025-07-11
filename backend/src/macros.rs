@@ -15,15 +15,15 @@ use diesel::prelude::*;
 pub fn macro_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
-            "/guilds/:guild_id/macros",
+            "/guilds/{guild_id}/macros",
             get(get_macros).post(create_macro),
         )
         .route(
-            "/guilds/:guild_id/macros/quick-access",
+            "/guilds/{guild_id}/macros/quick-access",
             get(get_quick_access_macros),
         )
         .route(
-            "/guilds/:guild_id/macros/:macro_name",
+            "/guilds/{guild_id}/macros/{macro_name}",
             get(get_macro_by_name)
                 .put(update_macro)
                 .delete(delete_macro),
