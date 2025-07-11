@@ -9,7 +9,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (authToken) {
 		const payload = parseJWT(authToken);
 		if (payload) {
-			event.locals.user = payload;
+			event.locals.user = {
+				...payload,
+				// TODO: this is temporary, we need to check if the user is a moderator
+				isModerator: true
+			};
 		}
 	}
 

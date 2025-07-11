@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { api } from '$lib/api';
 import { parseJWT, isGuildModerator } from '$lib/auth';
 import type { LayoutServerLoad } from './$types';
+import { PUBLIC_BACKEND_URL } from '$env/static/public';
 
 export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) => {
 	const user = locals.user;
@@ -40,11 +41,26 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) =>
 						availableGuilds = guilds.map((guild: any) => ({
 							guild_id: guild.id,
 							guild_name: guild.name,
-							guild_icon: guild.icon
+							guild_icon: guild.icon,
+							user_has_permissions: true
 						}));
 
+						const validationResponse = await fetch(`${PUBLIC_BACKEND_URL}/validate-guilds`, {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify(availableGuilds)
+						});
+
+						if (!validationResponse.ok) {
+							throw new Error('Failed to validate guilds with backend');
+						}
+
+						const validatedGuilds = await validationResponse.json();
+
 						// Find current guild info
-						currentGuild = availableGuilds.find((guild: any) => guild.guild_id === selectedGuildId);
+						currentGuild = validatedGuilds.find((guild: any) => guild.guild_id === selectedGuildId);
 
 						// Get user's member info for the selected guild to check moderator status
 						try {
