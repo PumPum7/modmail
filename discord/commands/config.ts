@@ -88,7 +88,7 @@ async function handleConfigSet(interaction: ChatInputCommandInteraction, guildId
 
 	switch (setting) {
 		case 'modmail-category':
-			const categoryChannel = interaction.options.getChannel('value');
+			const categoryChannel = interaction.options.getChannel('channel');
 			if (!categoryChannel || categoryChannel.type !== 4) {
 				// CategoryChannel
 				await interaction.reply({
@@ -100,8 +100,8 @@ async function handleConfigSet(interaction: ChatInputCommandInteraction, guildId
 			updateData.modmail_category_id = categoryChannel.id;
 			break;
 		case 'log-channel':
-			const logChannel = interaction.options.getChannel('value');
-			if (!logChannel || !logChannel.isTextBased()) {
+			const logChannel = interaction.options.getChannel('channel');
+			if (!logChannel || logChannel.type !== 0) {
 				await interaction.reply({
 					content: '❌ Please provide a valid text channel.',
 					flags: MessageFlagsBitField.Flags.Ephemeral,
@@ -153,7 +153,7 @@ async function handleConfigAdd(interaction: ChatInputCommandInteraction, guildId
 
 	switch (type) {
 		case 'moderator-role':
-			const role = interaction.options.getRole('value');
+			const role = interaction.options.getRole('role');
 			if (!role) {
 				await interaction.reply({
 					content: '❌ Please provide a valid role.',
@@ -196,7 +196,7 @@ async function handleConfigRemove(interaction: ChatInputCommandInteraction, guil
 
 	switch (type) {
 		case 'moderator-role':
-			const role = interaction.options.getRole('value');
+			const role = interaction.options.getRole('role');
 			if (!role) {
 				await interaction.reply({
 					content: '❌ Please provide a valid role.',

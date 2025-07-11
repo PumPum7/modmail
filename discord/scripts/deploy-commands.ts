@@ -93,6 +93,66 @@ const commands = [
 					option.setName('content').setDescription('The new content of the macro').setRequired(true)
 				)
 		),
+	new SlashCommandBuilder()
+		.setName('config')
+		.setDescription('Configure the modmail system')
+		.addSubcommand((sub) => sub.setName('show').setDescription('Show the current configuration'))
+		.addSubcommand((sub) =>
+			sub
+				.setName('set')
+				.setDescription('Set a configuration option')
+				.addStringOption((opt) =>
+					opt
+						.setName('setting')
+						.setDescription(
+							'(modmail-category, log-channel, randomize-names, auto-close-hours, welcome-message)'
+						)
+						.setRequired(true)
+				)
+				.addStringOption((opt) =>
+					opt.setName('value').setDescription('Value for the setting').setRequired(true)
+				)
+				.addChannelOption((opt) =>
+					opt
+						.setName('channel')
+						.setDescription('Channel (for modmail-category or log-channel)')
+						.setRequired(false)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('add')
+				.setDescription('Add a moderator role or blocked word')
+				.addStringOption((opt) =>
+					opt
+						.setName('type')
+						.setDescription('Type to add (moderator-role, blocked-word)')
+						.setRequired(true)
+				)
+				.addStringOption((opt) =>
+					opt.setName('value').setDescription('Value to add').setRequired(true)
+				)
+				.addRoleOption((opt) =>
+					opt.setName('role').setDescription('Role (for moderator-role)').setRequired(false)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName('remove')
+				.setDescription('Remove a moderator role or blocked word')
+				.addStringOption((opt) =>
+					opt.setName('type').setDescription('(moderator-role, blocked-word)').setRequired(true)
+				)
+				.addStringOption((opt) =>
+					opt.setName('value').setDescription('Value to remove').setRequired(true)
+				)
+				.addRoleOption((opt) =>
+					opt.setName('role').setDescription('Role (for moderator-role)').setRequired(false)
+				)
+		)
+		.addSubcommand((sub) =>
+			sub.setName('reset').setDescription('Reset all configuration to defaults')
+		),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN!);
