@@ -1,5 +1,7 @@
-use crate::db;
+use crate::db::DbPool;
 use crate::errors::AppError;
+use crate::models::{Message, NewMessage, NewThread, Thread};
+use crate::schema::{messages, thread_messages, threads};
 use crate::structs::{CloseThread, CreateMessage, CreateThread, UpdateThreadUrgency};
 use axum::{
     extract::{Json, Path, Query, State},
@@ -8,8 +10,9 @@ use axum::{
     routing::{get, post, put},
     Router,
 };
+use chrono::Utc;
+use diesel::prelude::*;
 use serde::Deserialize;
-use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -18,7 +21,7 @@ struct PaginationQuery {
     limit: Option<i64>,
 }
 
-pub fn thread_routes(db_pool: PgPool) -> Router {
+pub fn thread_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/threads",
@@ -41,34 +44,34 @@ pub fn thread_routes(db_pool: PgPool) -> Router {
 }
 
 async fn get_threads(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
+    let mut conn = pool.get()?;
     let page = pagination.page.unwrap_or(1).max(1);
     let limit = pagination.limit.unwrap_or(20).min(100).max(1);
     let offset = (page - 1) * limit;
 
-    let threads = sqlx::query_as::<_, db::Thread>(
-        "SELECT * FROM threads WHERE guild_id = $1 ORDER BY id DESC LIMIT $2 OFFSET $3",
-    )
-    .bind(guild_id.clone())
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&pool)
-    .await?;
+    let thread_results = threads::table
+        .filter(threads::guild_id.eq(&guild_id_path))
+        .order(threads::id.desc())
+        .limit(limit)
+        .offset(offset)
+        .select(Thread::as_select())
+        .load(&mut conn)?;
 
-    let total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM threads WHERE guild_id = $1")
-        .bind(guild_id)
-        .fetch_one(&pool)
-        .await?;
+    let total_count: i64 = threads::table
+        .filter(threads::guild_id.eq(guild_id_path))
+        .count()
+        .get_result(&mut conn)?;
 
     let total_pages = (total_count + limit - 1) / limit;
 
     Ok((
         StatusCode::OK,
         Json(serde_json::json!({
-            "threads": threads,
+            "threads": thread_results,
             "pagination": {
                 "page": page,
                 "limit": limit,
@@ -82,70 +85,70 @@ async fn get_threads(
 }
 
 async fn create_thread(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
     Json(payload): Json<CreateThread>,
 ) -> Result<impl IntoResponse, AppError> {
-    let urgency = payload.urgency.as_deref().unwrap_or("Medium");
+    let mut conn = pool.get()?;
+    let now = Utc::now();
+    let new_thread = NewThread {
+        user_id: &payload.user_id,
+        thread_id: &payload.thread_id,
+        guild_id: &guild_id_path,
+        urgency: payload.urgency,
+        is_open: true,
+        created_at: now,
+        updated_at: now,
+    };
 
-    let new_thread = sqlx::query_as::<_, db::Thread>(
-        "INSERT INTO threads (user_id, thread_id, urgency, guild_id) VALUES ($1, $2, $3, $4) RETURNING *",
-    )
-    .bind(&payload.user_id)
-    .bind(&payload.thread_id)
-    .bind(urgency)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let result = diesel::insert_into(threads::table)
+        .values(&new_thread)
+        .returning(Thread::as_returning())
+        .get_result(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(new_thread)))
+    Ok((StatusCode::OK, Json(result)))
 }
 
 async fn get_thread(
-    State(pool): State<PgPool>,
-    Path((guild_id, thread_id)): Path<(String, i32)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, thread_id_path)): Path<(String, i32)>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    let thread =
-        sqlx::query_as::<_, db::Thread>("SELECT * FROM threads WHERE id = $1 AND guild_id = $2")
-            .bind(thread_id)
-            .bind(guild_id)
-            .fetch_one(&pool)
-            .await?;
+    let mut conn = pool.get()?;
+    let thread_result = threads::table
+        .filter(
+            threads::id
+                .eq(thread_id_path)
+                .and(threads::guild_id.eq(guild_id_path)),
+        )
+        .select(Thread::as_select())
+        .first(&mut conn)?;
 
     let page = pagination.page.unwrap_or(1).max(1);
     let limit = pagination.limit.unwrap_or(50).min(100).max(1);
     let offset = (page - 1) * limit;
 
-    let messages = sqlx::query_as::<_, db::Message>(
-        r#"
-        SELECT m.* 
-        FROM messages m
-        INNER JOIN thread_messages tm ON m.id = tm.message_id
-        WHERE tm.thread_id = $1 
-        ORDER BY m.created_at ASC 
-        LIMIT $2 OFFSET $3
-        "#,
-    )
-    .bind(thread.id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&pool)
-    .await?;
+    let message_results = thread_messages::table
+        .inner_join(messages::table)
+        .filter(thread_messages::thread_id.eq(thread_id_path))
+        .order(messages::created_at.asc())
+        .limit(limit)
+        .offset(offset)
+        .select(Message::as_select())
+        .load(&mut conn)?;
 
-    let total_count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM thread_messages WHERE thread_id = $1")
-            .bind(thread.id)
-            .fetch_one(&pool)
-            .await?;
+    let total_count: i64 = thread_messages::table
+        .filter(thread_messages::thread_id.eq(thread_id_path))
+        .count()
+        .get_result(&mut conn)?;
 
     let total_pages = (total_count + limit - 1) / limit;
 
     Ok((
         StatusCode::OK,
         Json(serde_json::json!({
-            "thread": thread,
-            "messages": messages,
+            "thread": thread_result,
+            "messages": message_results,
             "pagination": {
                 "page": page,
                 "limit": limit,
@@ -159,32 +162,40 @@ async fn get_thread(
 }
 
 async fn close_thread(
-    State(pool): State<PgPool>,
-    Path((guild_id, thread_id)): Path<(String, i32)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, thread_id_path)): Path<(String, i32)>,
     Json(payload): Json<CloseThread>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated_thread = sqlx::query_as::<_, db::Thread>(
-        "UPDATE threads SET is_open = FALSE WHERE id = $1 AND guild_id = $2 RETURNING *",
+    let mut conn = pool.get()?;
+    let updated_thread = diesel::update(
+        threads::table.filter(
+            threads::id
+                .eq(thread_id_path)
+                .and(threads::guild_id.eq(guild_id_path)),
+        ),
     )
-    .bind(thread_id)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    .set(threads::is_open.eq(false))
+    .returning(Thread::as_returning())
+    .get_result(&mut conn)?;
 
     let discord_webhook_url = std::env::var("DISCORD_WEBHOOK_URL").ok();
 
     if let Some(webhook_url) = discord_webhook_url {
-        let payload = serde_json::json!({
+        let webhook_payload = serde_json::json!({
             "type": "thread_closed",
-            "thread": thread_id,
+            "thread": thread_id_path,
             "closed_by_id": payload.closed_by_id,
             "closed_by_tag": payload.closed_by_tag
         });
 
-        // Send webhook to Discord bot in background to avoid blocking
         tokio::spawn(async move {
             let client = reqwest::Client::new();
-            if let Err(e) = client.post(&webhook_url).json(&payload).send().await {
+            if let Err(e) = client
+                .post(&webhook_url)
+                .json(&webhook_payload)
+                .send()
+                .await
+            {
                 tracing::error!("Failed to send Discord webhook: {}", e);
             }
         });
@@ -194,49 +205,55 @@ async fn close_thread(
 }
 
 async fn add_message_to_thread(
-    State(pool): State<PgPool>,
-    Path((guild_id, thread_id)): Path<(String, i32)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, thread_id_path)): Path<(String, i32)>,
     Json(payload): Json<CreateMessage>,
 ) -> Result<impl IntoResponse, AppError> {
-    let thread_message_id = Uuid::new_v4();
-    let created_at = chrono::Utc::now();
-    let attachments = payload.attachments.unwrap_or_else(|| serde_json::json!([]));
+    let mut conn = pool.get()?;
+    let new_message = NewMessage {
+        id: Uuid::new_v4(),
+        author_id: &payload.author_id,
+        author_tag: &payload.author_tag,
+        content: &payload.content,
+        created_at: Utc::now(),
+        attachments: payload.attachments,
+        guild_id: &guild_id_path,
+    };
 
-    let new_message = sqlx::query_as::<_, db::Message>(
-        "INSERT INTO messages (id, author_id, author_tag, content, created_at, attachments, guild_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-    )
-    .bind(&thread_message_id)
-    .bind(&payload.author_id)
-    .bind(&payload.author_tag)
-    .bind(&payload.content)
-    .bind(&created_at)
-    .bind(&attachments)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let inserted_message: Message = diesel::insert_into(messages::table)
+        .values(&new_message)
+        .returning(Message::as_returning())
+        .get_result(&mut conn)?;
 
-    sqlx::query("INSERT INTO thread_messages (thread_id, message_id) VALUES ($1, $2)")
-        .bind(thread_id)
-        .bind(&thread_message_id)
-        .execute(&pool)
-        .await?;
+    diesel::insert_into(thread_messages::table)
+        .values((
+            thread_messages::thread_id.eq(thread_id_path),
+            thread_messages::message_id.eq(inserted_message.id),
+        ))
+        .execute(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(new_message)))
+    Ok((StatusCode::OK, Json(inserted_message)))
 }
 
 async fn update_thread_urgency(
-    State(pool): State<PgPool>,
-    Path((guild_id, thread_id)): Path<(String, i32)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, thread_id_path)): Path<(String, i32)>,
     Json(payload): Json<UpdateThreadUrgency>,
 ) -> Result<impl IntoResponse, AppError> {
-    let updated_thread = sqlx::query_as::<_, db::Thread>(
-        "UPDATE threads SET urgency = $1, updated_at = NOW() WHERE id = $2 AND guild_id = $3 RETURNING *",
+    let mut conn = pool.get()?;
+    let updated_thread = diesel::update(
+        threads::table.filter(
+            threads::id
+                .eq(thread_id_path)
+                .and(threads::guild_id.eq(guild_id_path)),
+        ),
     )
-    .bind(&payload.urgency)
-    .bind(thread_id)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    .set((
+        threads::urgency.eq(payload.urgency),
+        threads::updated_at.eq(Utc::now()),
+    ))
+    .returning(Thread::as_returning())
+    .get_result(&mut conn)?;
 
     Ok((StatusCode::OK, Json(updated_thread)))
 }

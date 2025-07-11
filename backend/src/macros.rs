@@ -1,5 +1,7 @@
-use crate::db;
+use crate::db::DbPool;
 use crate::errors::AppError;
+use crate::models::{Macro, NewMacro};
+use crate::schema::macros::dsl::*;
 use crate::structs::CreateMacro;
 use axum::{
     extract::{Json, Path, State},
@@ -8,9 +10,9 @@ use axum::{
     routing::get,
     Router,
 };
-use sqlx::PgPool;
+use diesel::prelude::*;
 
-pub fn macro_routes(db_pool: PgPool) -> Router {
+pub fn macro_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/macros",
@@ -21,7 +23,7 @@ pub fn macro_routes(db_pool: PgPool) -> Router {
             get(get_quick_access_macros),
         )
         .route(
-            "/guilds/:guild_id/macros/:name",
+            "/guilds/:guild_id/macros/:macro_name",
             get(get_macro_by_name)
                 .put(update_macro)
                 .delete(delete_macro),
@@ -30,46 +32,47 @@ pub fn macro_routes(db_pool: PgPool) -> Router {
 }
 
 async fn get_macros(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let macros =
-        sqlx::query_as::<_, db::Macro>("SELECT * FROM macros WHERE guild_id = $1 ORDER BY name")
-            .bind(guild_id)
-            .fetch_all(&pool)
-            .await?;
+    let mut conn = pool.get()?;
+    let results = macros
+        .filter(guild_id.eq(guild_id_path))
+        .order(name.asc())
+        .select(Macro::as_select())
+        .load(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(macros)))
+    Ok((StatusCode::OK, Json(results)))
 }
 
 async fn get_quick_access_macros(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let macros = sqlx::query_as::<_, db::Macro>(
-        "SELECT * FROM macros WHERE quick_access = TRUE AND guild_id = $1 ORDER BY name LIMIT 3",
-    )
-    .bind(guild_id)
-    .fetch_all(&pool)
-    .await?;
+    let mut conn = pool.get()?;
+    let results = macros
+        .filter(quick_access.eq(true).and(guild_id.eq(guild_id_path)))
+        .order(name.asc())
+        .limit(3)
+        .select(Macro::as_select())
+        .load(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(macros)))
+    Ok((StatusCode::OK, Json(results)))
 }
 
 async fn create_macro(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
     Json(payload): Json<CreateMacro>,
 ) -> Result<impl IntoResponse, AppError> {
-    let quick_access = payload.quick_access.unwrap_or(false);
+    let mut conn = pool.get()?;
+    let quick_access_payload = payload.quick_access.unwrap_or(false);
 
-    if quick_access {
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND guild_id = $1",
-        )
-        .bind(guild_id.clone())
-        .fetch_one(&pool)
-        .await?;
+    if quick_access_payload {
+        let count: i64 = macros
+            .filter(quick_access.eq(true).and(guild_id.eq(&guild_id_path)))
+            .count()
+            .get_result(&mut conn)?;
 
         if count >= 3 {
             return Err(AppError::Anyhow(anyhow::anyhow!(
@@ -78,31 +81,33 @@ async fn create_macro(
         }
     }
 
-    let new_macro = sqlx::query_as::<_, db::Macro>(
-        "INSERT INTO macros (name, content, quick_access, guild_id) VALUES ($1, $2, $3, $4) RETURNING *",
-    )
-    .bind(&payload.name)
-    .bind(&payload.content)
-    .bind(quick_access)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let new_macro = NewMacro {
+        name: &payload.name,
+        content: &payload.content,
+        quick_access: Some(quick_access_payload),
+        guild_id: &guild_id_path,
+    };
 
-    Ok((StatusCode::CREATED, Json(new_macro)))
+    let result = diesel::insert_into(macros)
+        .values(&new_macro)
+        .returning(Macro::as_returning())
+        .get_result(&mut conn)?;
+
+    Ok((StatusCode::CREATED, Json(result)))
 }
 
 async fn get_macro_by_name(
-    State(pool): State<PgPool>,
-    Path((guild_id, name)): Path<(String, String)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, macro_name)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let macro_data =
-        sqlx::query_as::<_, db::Macro>("SELECT * FROM macros WHERE name = $1 AND guild_id = $2")
-            .bind(name)
-            .bind(guild_id)
-            .fetch_optional(&pool)
-            .await?;
+    let mut conn = pool.get()?;
+    let result = macros
+        .filter(name.eq(macro_name).and(guild_id.eq(guild_id_path)))
+        .select(Macro::as_select())
+        .first(&mut conn)
+        .optional()?;
 
-    if let Some(macro_data) = macro_data {
+    if let Some(macro_data) = result {
         Ok((StatusCode::OK, Json(macro_data)))
     } else {
         Err(AppError::Anyhow(anyhow::anyhow!("Macro not found")))
@@ -110,16 +115,15 @@ async fn get_macro_by_name(
 }
 
 async fn delete_macro(
-    State(pool): State<PgPool>,
-    Path((guild_id, name)): Path<(String, String)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, macro_name)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result = sqlx::query("DELETE FROM macros WHERE name = $1 AND guild_id = $2")
-        .bind(name)
-        .bind(guild_id)
-        .execute(&pool)
-        .await?;
+    let mut conn = pool.get()?;
+    let num_deleted =
+        diesel::delete(macros.filter(name.eq(macro_name).and(guild_id.eq(guild_id_path))))
+            .execute(&mut conn)?;
 
-    if result.rows_affected() > 0 {
+    if num_deleted > 0 {
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(AppError::Anyhow(anyhow::anyhow!("Macro not found")))
@@ -127,20 +131,23 @@ async fn delete_macro(
 }
 
 async fn update_macro(
-    State(pool): State<PgPool>,
-    Path((guild_id, name)): Path<(String, String)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, macro_name)): Path<(String, String)>,
     Json(payload): Json<CreateMacro>,
 ) -> Result<impl IntoResponse, AppError> {
-    let quick_access = payload.quick_access.unwrap_or(false);
+    let mut conn = pool.get()?;
+    let quick_access_payload = payload.quick_access.unwrap_or(false);
 
-    if quick_access {
-        let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM macros WHERE quick_access = TRUE AND name != $1 AND guild_id = $2",
-        )
-        .bind(name.clone())
-        .bind(guild_id.clone())
-        .fetch_one(&pool)
-        .await?;
+    if quick_access_payload {
+        let count: i64 = macros
+            .filter(
+                quick_access
+                    .eq(true)
+                    .and(name.ne(&macro_name))
+                    .and(guild_id.eq(&guild_id_path)),
+            )
+            .count()
+            .get_result(&mut conn)?;
 
         if count >= 3 {
             return Err(AppError::Anyhow(anyhow::anyhow!(
@@ -149,15 +156,14 @@ async fn update_macro(
         }
     }
 
-    let updated_macro = sqlx::query_as::<_, db::Macro>(
-        "UPDATE macros SET content = $1, quick_access = $2 WHERE name = $3 AND guild_id = $4 RETURNING *",
-    )
-    .bind(&payload.content)
-    .bind(quick_access)
-    .bind(name)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let updated_macro =
+        diesel::update(macros.filter(name.eq(macro_name).and(guild_id.eq(guild_id_path))))
+            .set((
+                content.eq(payload.content),
+                quick_access.eq(quick_access_payload),
+            ))
+            .returning(Macro::as_returning())
+            .get_result(&mut conn)?;
 
     Ok((StatusCode::OK, Json(updated_macro)))
 }

@@ -1,5 +1,7 @@
-use crate::db;
+use crate::db::DbPool;
 use crate::errors::AppError;
+use crate::models::{Message, NewMessage};
+use crate::schema::messages::dsl::*;
 use crate::structs::CreateMessage;
 use axum::{
     extract::{Json, Path, State},
@@ -8,10 +10,11 @@ use axum::{
     routing::get,
     Router,
 };
-use sqlx::PgPool;
+use chrono::Utc;
+use diesel::prelude::*;
 use uuid::Uuid;
 
-pub fn message_routes(db_pool: PgPool) -> Router {
+pub fn message_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/messages",
@@ -21,41 +24,39 @@ pub fn message_routes(db_pool: PgPool) -> Router {
 }
 
 async fn get_messages(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let messages = sqlx::query_as::<_, db::Message>("SELECT * FROM messages WHERE guild_id = $1")
-        .bind(guild_id)
-        .fetch_all(&pool)
-        .await?;
+    let mut conn = pool.get()?;
+    let results = messages
+        .filter(guild_id.eq(guild_id_path))
+        .select(Message::as_select())
+        .load(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(messages)))
+    Ok((StatusCode::OK, Json(results)))
 }
 
 async fn create_message(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
     Json(payload): Json<CreateMessage>,
 ) -> Result<impl IntoResponse, AppError> {
-    let created_at = chrono::Utc::now();
-    let id = Uuid::new_v4();
-    let attachments = payload
-        .attachments
-        .clone()
-        .unwrap_or_else(|| serde_json::json!([]));
+    let mut conn = pool.get()?;
 
-    let new_message = sqlx::query_as::<_, db::Message>(
-        "INSERT INTO messages (id, author_id, author_tag, content, created_at, attachments, guild_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-    )
-    .bind(&id)
-    .bind(&payload.author_id)
-    .bind(&payload.author_tag)
-    .bind(&payload.content)
-    .bind(&created_at)
-    .bind(&attachments)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let new_message = NewMessage {
+        id: Uuid::new_v4(),
+        author_id: &payload.author_id,
+        author_tag: &payload.author_tag,
+        content: &payload.content,
+        created_at: Utc::now(),
+        attachments: payload.attachments,
+        guild_id: &guild_id_path,
+    };
 
-    Ok((StatusCode::CREATED, Json(new_message)))
+    let result = diesel::insert_into(messages)
+        .values(&new_message)
+        .returning(Message::as_returning())
+        .get_result(&mut conn)?;
+
+    Ok((StatusCode::CREATED, Json(result)))
 }

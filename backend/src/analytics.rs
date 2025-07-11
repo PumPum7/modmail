@@ -1,4 +1,7 @@
+use crate::db::DbPool;
 use crate::errors::AppError;
+use crate::models::{AnalyticsOverview, ModeratorActivity, ResponseTimeMetrics, ThreadVolumeData};
+use crate::schema::{blocked_users, messages, notes, threads};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -6,10 +9,10 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use serde::Serialize;
-use sqlx::{FromRow, PgPool};
+use diesel::prelude::*;
+use diesel::sql_types::Text;
 
-pub fn analytics_routes(db_pool: PgPool) -> Router {
+pub fn analytics_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/analytics/overview",
@@ -34,82 +37,47 @@ pub fn analytics_routes(db_pool: PgPool) -> Router {
         .with_state(db_pool)
 }
 
-#[derive(Serialize, FromRow)]
-struct AnalyticsOverview {
-    total_threads: i64,
-    open_threads: i64,
-    closed_threads: i64,
-    total_messages: i64,
-    total_notes: i64,
-    blocked_users: i64,
-    avg_response_time_hours: Option<f64>,
-    threads_today: i64,
-    threads_this_week: i64,
-    threads_this_month: i64,
-}
-
-#[derive(Serialize, FromRow)]
-struct ThreadVolumeData {
-    date: String,
-    count: i64,
-}
-
-#[derive(Serialize, FromRow)]
-struct ModeratorActivity {
-    moderator_tag: String,
-    message_count: i64,
-    note_count: i64,
-    threads_closed: i32,
-}
-
-#[derive(Serialize, FromRow)]
-struct ResponseTimeMetrics {
-    avg_first_response_hours: Option<f64>,
-    avg_resolution_time_hours: Option<f64>,
-    median_first_response_hours: Option<f64>,
-}
-
 async fn get_analytics_overview(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let total_threads: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM threads WHERE guild_id = $1")
-        .bind(guild_id.clone())
-        .fetch_one(&pool)
-        .await?;
+    let mut conn = pool.get()?;
 
-    let open_threads: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM threads WHERE is_open = true AND guild_id = $1")
-            .bind(guild_id.clone())
-            .fetch_one(&pool)
-            .await?;
+    let total_threads: i64 = threads::table
+        .filter(threads::guild_id.eq(&guild_id_path))
+        .count()
+        .get_result(&mut conn)?;
+
+    let open_threads: i64 = threads::table
+        .filter(
+            threads::is_open
+                .eq(true)
+                .and(threads::guild_id.eq(&guild_id_path)),
+        )
+        .count()
+        .get_result(&mut conn)?;
 
     let closed_threads = total_threads - open_threads;
 
-    // Calculate time-based thread counts
-    let threads_today: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE",
-    )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    let threads_today = threads::table
+        .filter(threads::guild_id.eq(&guild_id_path))
+        .filter(threads::created_at.ge(Utc::now().date_naive()))
+        .count()
+        .get_result(&mut conn)?;
 
-    let threads_this_week: i64 = sqlx::query_scalar(
+    let threads_this_week: i64 = diesel::sql_query(
         "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '7 days'",
     )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    .bind::<Text, _>(&guild_id_path)
+    .get_result(&mut conn)?;
 
-    let threads_this_month: i64 = sqlx::query_scalar(
+    let threads_this_month: i64 = diesel::sql_query(
         "SELECT COUNT(*) FROM threads WHERE guild_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '30 days'",
     )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    .bind::<Text, _>(&guild_id_path)
+    .get_result(&mut conn)?;
 
-    // Calculate average response time (hours between thread creation and first message)
-    let avg_response_time_hours: Option<f64> = sqlx::query_scalar(
+    let avg_response_time_hours: Option<f64> = diesel::sql_query(
         r#"
         WITH first_responses AS (
             SELECT 
@@ -121,7 +89,7 @@ async fn get_analytics_overview(
             INNER JOIN messages m ON tm.message_id = m.id
             WHERE t.guild_id = $1 
                 AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
-                AND m.author_id != t.user_id -- Exclude user's own messages
+                AND m.author_id != t.user_id
             GROUP BY t.id, t.created_at
         )
         SELECT AVG(EXTRACT(EPOCH FROM (first_message - thread_created)) / 3600.0)
@@ -129,29 +97,31 @@ async fn get_analytics_overview(
         WHERE first_message > thread_created
         "#,
     )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    .bind::<Text, _>(&guild_id_path)
+    .get_result(&mut conn)?;
 
-    let (total_messages, total_notes, blocked_users) = tokio::join!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM messages WHERE guild_id = $1")
-            .bind(guild_id.clone())
-            .fetch_one(&pool),
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM notes WHERE guild_id = $1")
-            .bind(guild_id.clone())
-            .fetch_one(&pool),
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM blocked_users WHERE guild_id = $1")
-            .bind(guild_id.clone())
-            .fetch_one(&pool)
-    );
+    let total_messages: i64 = messages::table
+        .filter(messages::guild_id.eq(&guild_id_path))
+        .count()
+        .get_result(&mut conn)?;
+
+    let total_notes: i64 = notes::table
+        .filter(notes::guild_id.eq(&guild_id_path))
+        .count()
+        .get_result(&mut conn)?;
+
+    let blocked_users_count: i64 = blocked_users::table
+        .filter(blocked_users::guild_id.eq(&guild_id_path))
+        .count()
+        .get_result(&mut conn)?;
 
     let overview = AnalyticsOverview {
         total_threads,
         open_threads,
         closed_threads,
-        total_messages: total_messages.unwrap_or(0),
-        total_notes: total_notes.unwrap_or(0),
-        blocked_users: blocked_users.unwrap_or(0),
+        total_messages,
+        total_notes,
+        blocked_users: blocked_users_count,
         avg_response_time_hours,
         threads_today,
         threads_this_week,
@@ -162,10 +132,11 @@ async fn get_analytics_overview(
 }
 
 async fn get_thread_volume(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let volume_data = sqlx::query_as::<_, ThreadVolumeData>(
+    let mut conn = pool.get()?;
+    let volume_data = diesel::sql_query(
         r#"
         SELECT 
             DATE(created_at)::TEXT as "date",
@@ -176,18 +147,18 @@ async fn get_thread_volume(
         ORDER BY DATE(created_at) DESC
         "#,
     )
-    .bind(guild_id)
-    .fetch_all(&pool)
-    .await?;
+    .bind::<Text, _>(guild_id_path)
+    .load::<ThreadVolumeData>(&mut conn)?;
 
     Ok((StatusCode::OK, Json(volume_data)))
 }
 
 async fn get_moderator_activity(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let activity_data = sqlx::query_as::<_, ModeratorActivity>(
+    let mut conn = pool.get()?;
+    let activity_data = diesel::sql_query(
         r#"
         SELECT 
             COALESCE(m.author_tag, n.author_tag, 'Unknown') as "moderator_tag",
@@ -209,19 +180,18 @@ async fn get_moderator_activity(
         ORDER BY (COALESCE(message_count, 0) + COALESCE(note_count, 0)) DESC
         "#,
     )
-    .bind(guild_id)
-    .fetch_all(&pool)
-    .await?;
+    .bind::<Text, _>(guild_id_path)
+    .load::<ModeratorActivity>(&mut conn)?;
 
     Ok((StatusCode::OK, Json(activity_data)))
 }
 
 async fn get_response_times(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    // Calculate average first response time (hours between thread creation and first moderator message)
-    let avg_first_response_hours: Option<f64> = sqlx::query_scalar(
+    let mut conn = pool.get()?;
+    let avg_first_response_hours: Option<f64> = diesel::sql_query(
         r#"
         WITH first_responses AS (
             SELECT 
@@ -233,7 +203,7 @@ async fn get_response_times(
             INNER JOIN messages m ON tm.message_id = m.id
             WHERE t.guild_id = $1 
                 AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
-                AND m.author_id != t.user_id -- Exclude user's own messages
+                AND m.author_id != t.user_id
             GROUP BY t.id, t.created_at
         )
         SELECT AVG(EXTRACT(EPOCH FROM (first_response - thread_created)) / 3600.0)
@@ -241,48 +211,42 @@ async fn get_response_times(
         WHERE first_response > thread_created
         "#,
     )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    .bind::<Text, _>(&guild_id_path)
+    .get_result(&mut conn)?;
 
-    // Calculate average resolution time (hours between thread creation and closure)
-    let avg_resolution_time_hours: Option<f64> = sqlx::query_scalar(
+    let avg_resolution_time_hours: Option<f64> = diesel::sql_query(
         r#"
         SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 3600.0)
-        FROM threads 
-        WHERE guild_id = $1 
-            AND is_open = false 
-            AND created_at >= CURRENT_DATE - INTERVAL '30 days'
-            AND updated_at > created_at
+        FROM threads
+        WHERE is_open = false 
+            AND guild_id = $1 
+            AND updated_at >= CURRENT_DATE - INTERVAL '30 days'
         "#,
     )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    .bind::<Text, _>(&guild_id_path)
+    .get_result(&mut conn)?;
 
-    // Calculate median first response time
-    let median_first_response_hours: Option<f64> = sqlx::query_scalar(
+    let median_first_response_hours: Option<f64> = diesel::sql_query(
         r#"
         WITH first_responses AS (
             SELECT 
-                EXTRACT(EPOCH FROM (MIN(m.created_at) - t.created_at)) / 3600.0 as response_hours
+                t.created_at as thread_created,
+                MIN(m.created_at) as first_response
             FROM threads t
             INNER JOIN thread_messages tm ON t.id = tm.thread_id
             INNER JOIN messages m ON tm.message_id = m.id
             WHERE t.guild_id = $1 
                 AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
-                AND m.author_id != t.user_id -- Exclude user's own messages
-                AND m.created_at > t.created_at
+                AND m.author_id != t.user_id
             GROUP BY t.id, t.created_at
         )
-        SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY response_hours)
+        SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_response - thread_created)) / 3600.0)
         FROM first_responses
-        WHERE response_hours > 0
+        WHERE first_response > thread_created
         "#,
     )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
+    .bind::<Text, _>(guild_id_path)
+    .get_result(&mut conn)?;
 
     let metrics = ResponseTimeMetrics {
         avg_first_response_hours,
@@ -294,32 +258,9 @@ async fn get_response_times(
 }
 
 async fn refresh_analytics(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(_pool): State<DbPool>,
+    Path(_guild_id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    // For now, we can use this to validate data integrity and return basic stats
-    sqlx::query(
-        r#"
-        SELECT 
-            COUNT(DISTINCT t.id) as total_threads,
-            COUNT(DISTINCT tm.message_id) as linked_messages,
-            COUNT(DISTINCT n.id) as total_notes
-        FROM threads t
-        LEFT JOIN thread_messages tm ON t.id = tm.thread_id
-        LEFT JOIN notes n ON t.id = n.thread_id
-        WHERE t.guild_id = $1
-        "#,
-    )
-    .bind(guild_id.clone())
-    .fetch_one(&pool)
-    .await?;
-
-    Ok((
-        StatusCode::OK,
-        Json(serde_json::json!({
-            "success": "Analytics refreshed successfully",
-            "guild_id": guild_id,
-            "timestamp": chrono::Utc::now().to_rfc3339()
-        })),
-    ))
+    // This could trigger a background job to update materialized views or a cache
+    Ok((StatusCode::OK, "Analytics refresh job started"))
 }

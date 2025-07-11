@@ -1,7 +1,8 @@
+use crate::db::DbPool;
 use crate::errors::AppError;
-use crate::structs::{
-    CreateServer, GuildConfig, Server, UpdateServer, ValidateGuildRequest, ValidatedGuild,
-};
+use crate::models::{NewServer, Server};
+use crate::schema::{guild_configs, servers};
+use crate::structs::{CreateServer, UpdateServer, ValidateGuildRequest, ValidatedGuild};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -9,10 +10,11 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use sqlx::PgPool;
+use chrono::Utc;
+use diesel::prelude::*;
 
 // Route builder
-pub fn server_routes(db_pool: PgPool) -> Router {
+pub fn server_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route("/servers", post(create_server).get(get_servers))
         .route(
@@ -23,39 +25,48 @@ pub fn server_routes(db_pool: PgPool) -> Router {
         .with_state(db_pool)
 }
 
-// Get all servers (for a user, you might add authentication and filtering here)
-async fn get_servers(State(db_pool): State<PgPool>) -> Result<Json<Vec<Server>>, AppError> {
-    let servers = sqlx::query_as::<_, Server>("SELECT * FROM servers")
-        .fetch_all(&db_pool)
-        .await?;
-    Ok(Json(servers))
+// Get all servers
+async fn get_servers(State(pool): State<DbPool>) -> Result<Json<Vec<Server>>, AppError> {
+    let mut conn = pool.get()?;
+    let results = servers::table.select(Server::as_select()).load(&mut conn)?;
+    Ok(Json(results))
 }
 
 // Create a new server
 async fn create_server(
-    State(db_pool): State<PgPool>,
+    State(pool): State<DbPool>,
     Json(payload): Json<CreateServer>,
 ) -> Result<Json<Server>, AppError> {
-    let server = sqlx::query_as::<_, Server>(
-        "INSERT INTO servers (guild_id, guild_name) VALUES ($1, $2) RETURNING *",
-    )
-    .bind(payload.guild_id)
-    .bind(payload.guild_name)
-    .fetch_one(&db_pool)
-    .await?;
-    Ok(Json(server))
+    let mut conn = pool.get()?;
+    let now = Utc::now();
+    let new_server = NewServer {
+        guild_id: &payload.guild_id,
+        guild_name: &payload.guild_name,
+        created_at: now,
+        updated_at: now,
+    };
+
+    let result = diesel::insert_into(servers::table)
+        .values(&new_server)
+        .returning(Server::as_returning())
+        .get_result(&mut conn)?;
+
+    Ok(Json(result))
 }
 
 // Get a specific server by guild_id
 async fn get_server(
-    State(db_pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<Json<Server>, AppError> {
-    let server = sqlx::query_as::<_, Server>("SELECT * FROM servers WHERE guild_id = $1")
-        .bind(guild_id)
-        .fetch_optional(&db_pool)
-        .await?;
-    if let Some(server) = server {
+    let mut conn = pool.get()?;
+    let result = servers::table
+        .filter(servers::guild_id.eq(guild_id_path))
+        .select(Server::as_select())
+        .first(&mut conn)
+        .optional()?;
+
+    if let Some(server) = result {
         Ok(Json(server))
     } else {
         Err(AppError::Anyhow(anyhow::anyhow!("Server not found")))
@@ -64,81 +75,68 @@ async fn get_server(
 
 // Update a server's settings
 async fn update_server(
-    State(db_pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
     Json(payload): Json<UpdateServer>,
 ) -> Result<Json<Server>, AppError> {
-    // Fetch the current server details to have a complete object to return
-    let current_server = match get_server(State(db_pool.clone()), Path(guild_id.clone())).await {
-        Ok(Json(server)) => server,
-        Err(e) => return Err(e),
-    };
+    let mut conn = pool.get()?;
+    let target = servers::table.filter(servers::guild_id.eq(guild_id_path));
 
-    let guild_name = payload.guild_name.unwrap_or(current_server.guild_name);
-    let is_premium = payload.is_premium.unwrap_or(current_server.is_premium);
-    let max_threads = payload.max_threads.unwrap_or(current_server.max_threads);
-    let max_macros = payload.max_macros.unwrap_or(current_server.max_macros);
+    let updated_server = diesel::update(target)
+        .set((
+            payload.guild_name.map(|name| servers::guild_name.eq(name)),
+            payload.is_premium.map(|p| servers::is_premium.eq(p)),
+            payload.max_threads.map(|mt| servers::max_threads.eq(mt)),
+            payload.max_macros.map(|mm| servers::max_macros.eq(mm)),
+            servers::updated_at.eq(Utc::now()),
+        ))
+        .returning(Server::as_returning())
+        .get_result(&mut conn)?;
 
-    let server = sqlx::query_as::<_, Server>(
-        "UPDATE servers SET guild_name = $1, is_premium = $2, max_threads = $3, max_macros = $4, updated_at = NOW() WHERE guild_id = $5 RETURNING *"
-    )
-    .bind(guild_name)
-    .bind(is_premium)
-    .bind(max_threads)
-    .bind(max_macros)
-    .bind(guild_id)
-    .fetch_one(&db_pool)
-    .await?;
-    Ok(Json(server))
+    Ok(Json(updated_server))
 }
 
 // Delete a server
 async fn delete_server(
-    State(db_pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<StatusCode, AppError> {
-    let result = sqlx::query("DELETE FROM servers WHERE guild_id = $1")
-        .bind(guild_id)
-        .execute(&db_pool)
-        .await?;
+    let mut conn = pool.get()?;
+    let num_deleted = diesel::delete(servers::table.filter(servers::guild_id.eq(guild_id_path)))
+        .execute(&mut conn)?;
 
-    if result.rows_affected() > 0 {
+    if num_deleted > 0 {
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(AppError::Anyhow(anyhow::anyhow!("Server not found")))
     }
 }
 
-// Validate which guilds a user can access (bot is present + user has permissions)
+// Validate which guilds a user can access
 async fn validate_user_guilds(
-    State(db_pool): State<PgPool>,
+    State(pool): State<DbPool>,
     Json(payload): Json<Vec<ValidateGuildRequest>>,
 ) -> Result<Json<Vec<ValidatedGuild>>, AppError> {
-    // Collect all guild_ids from the user
+    let mut conn = pool.get()?;
     let user_guild_ids: Vec<String> = payload.iter().map(|g| g.guild_id.clone()).collect();
     if user_guild_ids.is_empty() {
         return Ok(Json(vec![]));
     }
 
-    // Query all servers in one go
-    let rows = sqlx::query_as::<_, Server>("SELECT guild_id FROM servers WHERE guild_id = ANY($1)")
-        .bind(&user_guild_ids)
-        .fetch_all(&db_pool)
-        .await?;
-    let bot_guild_ids: std::collections::HashSet<String> =
-        rows.iter().map(|r| r.guild_id.clone()).collect();
+    let bot_guild_ids: std::collections::HashSet<String> = servers::table
+        .filter(servers::guild_id.eq_any(&user_guild_ids))
+        .select(servers::guild_id)
+        .load::<String>(&mut conn)?
+        .into_iter()
+        .collect();
 
-    // Query configs for those guilds
-    let config_rows = sqlx::query_as::<_, GuildConfig>(
-        "SELECT guild_id FROM guild_configs WHERE guild_id = ANY($1)",
-    )
-    .bind(&user_guild_ids)
-    .fetch_all(&db_pool)
-    .await?;
-    let config_guild_ids: std::collections::HashSet<String> =
-        config_rows.into_iter().map(|r| r.guild_id).collect();
+    let config_guild_ids: std::collections::HashSet<String> = guild_configs::table
+        .filter(guild_configs::guild_id.eq_any(&user_guild_ids))
+        .select(guild_configs::guild_id)
+        .load::<String>(&mut conn)?
+        .into_iter()
+        .collect();
 
-    // Build validated list
     let validated_guilds: Vec<ValidatedGuild> = payload
         .into_iter()
         .filter(|g| bot_guild_ids.contains(&g.guild_id))

@@ -1,75 +1,13 @@
-use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, types::uuid::Uuid, PgPool};
-use std::time::Duration;
+use diesel::pg::PgConnection;
+use diesel::r2d2::{ConnectionManager, Pool};
+use std::env;
 
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
-pub struct Message {
-    pub id: Uuid,
-    pub author_id: String,
-    pub author_tag: String,
-    pub content: String,
-    pub attachments: serde_json::Value,
-    pub guild_id: String,
-    #[serde(with = "chrono::serde::ts_seconds")]
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
+pub type DbPool = diesel::r2d2::Pool<ConnectionManager<PgConnection>>;
 
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
-pub struct Thread {
-    pub id: i32,
-    pub user_id: String,
-    pub thread_id: String,
-    pub is_open: bool,
-    pub urgency: String,
-    pub guild_id: String,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
-}
-
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
-pub struct Macro {
-    pub id: i32,
-    pub name: String,
-    pub content: String,
-    pub quick_access: bool,
-    pub guild_id: String,
-}
-
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
-pub struct Note {
-    pub id: Uuid,
-    pub thread_id: i32,
-    pub author_id: String,
-    pub author_tag: String,
-    pub content: String,
-    pub guild_id: String,
-    #[serde(with = "chrono::serde::ts_seconds")]
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
-pub struct BlockedUser {
-    pub id: i32,
-    pub user_id: String,
-    pub user_tag: String,
-    pub blocked_by: String,
-    pub blocked_by_tag: String,
-    pub reason: Option<String>,
-    pub guild_id: String,
-    #[serde(with = "chrono::serde::ts_seconds")]
-    pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-pub async fn connect(database_url: &str) -> Result<PgPool, sqlx::Error> {
-    PgPoolOptions::new()
-        .max_connections(20)
-        .min_connections(2)
-        .acquire_timeout(Duration::from_secs(30))
-        .idle_timeout(Duration::from_secs(600)) // 10 minutes
-        .max_lifetime(Duration::from_secs(1800)) // 30 minutes
-        .test_before_acquire(true)
-        .connect(database_url)
-        .await
+pub fn establish_connection() -> DbPool {
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    Pool::builder()
+        .build(manager)
+        .expect("Failed to create pool.")
 }

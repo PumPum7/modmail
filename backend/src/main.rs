@@ -13,7 +13,9 @@ mod errors;
 mod guild_configs;
 mod macros;
 mod messages;
+mod models;
 mod notes;
+mod schema;
 mod servers;
 mod structs;
 mod threads;
@@ -35,8 +37,7 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let pool = db::connect(&database_url).await?;
+    let pool = db::establish_connection();
 
     let app = Router::new()
         .route("/health", get(health_check))
@@ -57,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    axum::Server::bind(&addr)
+    axum_server::bind(addr)
         .serve(app.into_make_service())
         .await?;
 

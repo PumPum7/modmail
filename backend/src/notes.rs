@@ -1,5 +1,7 @@
-use crate::db;
+use crate::db::DbPool;
 use crate::errors::AppError;
+use crate::models::{NewNote, Note};
+use crate::schema::{notes, threads};
 use crate::structs::CreateNote;
 use axum::{
     extract::{Json, Path, State},
@@ -8,10 +10,11 @@ use axum::{
     routing::get,
     Router,
 };
-use sqlx::PgPool;
+use chrono::Utc;
+use diesel::prelude::*;
 use uuid::Uuid;
 
-pub fn note_routes(db_pool: PgPool) -> Router {
+pub fn note_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/threads/:thread_id/notes",
@@ -21,61 +24,71 @@ pub fn note_routes(db_pool: PgPool) -> Router {
 }
 
 async fn get_thread_notes(
-    State(pool): State<PgPool>,
-    Path((guild_id, thread_id)): Path<(String, i32)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, thread_id_path)): Path<(String, i32)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let thread_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM threads WHERE id = $1 AND guild_id = $2)")
-            .bind(thread_id)
-            .bind(guild_id)
-            .fetch_one(&pool)
-            .await?;
+    let mut conn = pool.get()?;
+
+    let thread_exists = threads::table
+        .filter(
+            threads::id
+                .eq(thread_id_path)
+                .and(threads::guild_id.eq(guild_id_path)),
+        )
+        .select(threads::id)
+        .first::<i32>(&mut conn)
+        .optional()?
+        .is_some();
 
     if !thread_exists {
         return Err(AppError::Anyhow(anyhow::anyhow!("Thread not found")));
     }
 
-    let notes = sqlx::query_as::<_, db::Note>(
-        "SELECT * FROM notes WHERE thread_id = $1 ORDER BY created_at ASC",
-    )
-    .bind(thread_id)
-    .fetch_all(&pool)
-    .await?;
+    let results = notes::table
+        .filter(notes::thread_id.eq(thread_id_path))
+        .order(notes::created_at.asc())
+        .select(Note::as_select())
+        .load(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(notes)))
+    Ok((StatusCode::OK, Json(results)))
 }
 
 async fn add_note_to_thread(
-    State(pool): State<PgPool>,
-    Path((guild_id, thread_id)): Path<(String, i32)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, thread_id_path)): Path<(String, i32)>,
     Json(payload): Json<CreateNote>,
 ) -> Result<impl IntoResponse, AppError> {
-    let thread_exists: bool =
-        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM threads WHERE id = $1 AND guild_id = $2)")
-            .bind(thread_id)
-            .bind(guild_id.clone())
-            .fetch_one(&pool)
-            .await?;
+    let mut conn = pool.get()?;
+
+    let thread_exists = threads::table
+        .filter(
+            threads::id
+                .eq(thread_id_path)
+                .and(threads::guild_id.eq(&guild_id_path)),
+        )
+        .select(threads::id)
+        .first::<i32>(&mut conn)
+        .optional()?
+        .is_some();
 
     if !thread_exists {
         return Err(AppError::Anyhow(anyhow::anyhow!("Thread not found")));
     }
 
-    let note_id = Uuid::new_v4();
-    let created_at = chrono::Utc::now();
+    let new_note = NewNote {
+        id: Uuid::new_v4(),
+        thread_id: thread_id_path,
+        author_id: &payload.author_id,
+        author_tag: &payload.author_tag,
+        content: &payload.content,
+        created_at: Utc::now(),
+        guild_id: &guild_id_path,
+    };
 
-    let new_note = sqlx::query_as::<_, db::Note>(
-        "INSERT INTO notes (id, thread_id, author_id, author_tag, content, created_at, guild_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-    )
-    .bind(note_id)
-    .bind(thread_id)
-    .bind(&payload.author_id)
-    .bind(&payload.author_tag)
-    .bind(&payload.content)
-    .bind(created_at)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let result = diesel::insert_into(notes::table)
+        .values(&new_note)
+        .returning(Note::as_returning())
+        .get_result(&mut conn)?;
 
-    Ok((StatusCode::CREATED, Json(new_note)))
+    Ok((StatusCode::CREATED, Json(result)))
 }

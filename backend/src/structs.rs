@@ -1,6 +1,7 @@
-use chrono::{DateTime, Utc};
+use diesel::prelude::{AsChangeset, Identifiable};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+
+use crate::schema::guild_configs;
 
 #[derive(Deserialize)]
 pub struct CreateMessage {
@@ -71,20 +72,9 @@ pub struct UpdateServer {
     pub max_macros: Option<i32>,
 }
 
-#[derive(Serialize, FromRow)]
-pub struct Server {
-    pub id: i32,
-    pub guild_id: String,
-    pub guild_name: String,
-    pub is_premium: bool,
-    pub max_threads: i32,
-    pub max_macros: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
 // Structs for guild configurations
-#[derive(Deserialize)]
+#[derive(Deserialize, AsChangeset)]
+#[diesel(table_name = guild_configs)]
 pub struct CreateGuildConfig {
     pub guild_id: String,
     pub modmail_category_id: Option<String>,
@@ -105,24 +95,6 @@ pub struct UpdateGuildConfig {
     pub welcome_message: Option<String>,
     pub moderator_role_ids: Option<Vec<String>>,
     pub blocked_words: Option<Vec<String>>,
-}
-
-#[derive(Serialize, FromRow, Deserialize, Clone)]
-pub struct GuildConfig {
-    #[serde(default)]
-    pub id: i32,
-    pub guild_id: String,
-    pub modmail_category_id: Option<String>,
-    pub log_channel_id: Option<String>,
-    pub randomize_names: bool,
-    pub auto_close_hours: Option<i32>,
-    pub welcome_message: Option<String>,
-    pub moderator_role_ids: Vec<String>,
-    pub blocked_words: Vec<String>,
-    #[serde(default)]
-    pub created_at: DateTime<Utc>,
-    #[serde(default)]
-    pub updated_at: DateTime<Utc>,
 }
 
 // Guild validation structs

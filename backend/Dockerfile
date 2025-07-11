@@ -26,9 +26,6 @@ COPY migrations ./migrations
 # Build the actual application
 RUN cargo build --release
 
-# Install sqlx-cli for migrations
-RUN cargo install sqlx-cli --no-default-features --features postgres
-
 # Runtime stage
 FROM debian:bookworm-slim
 
@@ -43,7 +40,6 @@ WORKDIR /app
 
 # Copy the binary and sqlx-cli from builder stage
 COPY --from=builder /usr/src/app/target/release/backend /app/backend
-COPY --from=builder /usr/local/cargo/bin/sqlx /usr/local/bin/sqlx
 COPY --from=builder /usr/src/app/migrations /app/migrations
 
 # Make the binary executable
@@ -65,7 +61,7 @@ while ! pg_isready -h db -p 5432 -U $POSTGRES_USER; do\n\
   sleep 2\n\
 done\n\
 echo "Database is ready, running migrations..."\n\
-sqlx database setup || {\n\
+diesel migration run || {\n\
   echo "Migration failed, but continuing..."\n\
 }\n\
 echo "Starting backend..."\n\

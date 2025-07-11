@@ -1,5 +1,7 @@
-use crate::db;
+use crate::db::DbPool;
 use crate::errors::AppError;
+use crate::models::{BlockedUser, NewBlockedUser};
+use crate::schema::blocked_users::dsl::*;
 use crate::structs::CreateBlockedUser;
 use axum::{
     extract::{Json, Path, State},
@@ -8,9 +10,10 @@ use axum::{
     routing::{delete, get},
     Router,
 };
-use sqlx::PgPool;
+use chrono::Utc;
+use diesel::prelude::*;
 
-pub fn blocked_user_routes(db_pool: PgPool) -> Router {
+pub fn blocked_user_routes(db_pool: DbPool) -> Router {
     Router::new()
         .route(
             "/guilds/:guild_id/blocked-users",
@@ -24,50 +27,54 @@ pub fn blocked_user_routes(db_pool: PgPool) -> Router {
 }
 
 async fn get_blocked_users(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
-    let blocked_users = sqlx::query_as::<_, db::BlockedUser>(
-        "SELECT * FROM blocked_users WHERE guild_id = $1 ORDER BY created_at DESC",
-    )
-    .bind(guild_id)
-    .fetch_all(&pool)
-    .await?;
+    let mut conn = pool.get()?;
+    let results = blocked_users
+        .filter(guild_id.eq(guild_id_path))
+        .order(created_at.desc())
+        .select(BlockedUser::as_select())
+        .load(&mut conn)?;
 
-    Ok((StatusCode::OK, Json(blocked_users)))
+    Ok((StatusCode::OK, Json(results)))
 }
 
 async fn block_user(
-    State(pool): State<PgPool>,
-    Path(guild_id): Path<String>,
+    State(pool): State<DbPool>,
+    Path(guild_id_path): Path<String>,
     Json(payload): Json<CreateBlockedUser>,
 ) -> Result<impl IntoResponse, AppError> {
-    let new_blocked_user = sqlx::query_as::<_, db::BlockedUser>(
-        "INSERT INTO blocked_users (user_id, user_tag, blocked_by, blocked_by_tag, reason, guild_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-    )
-    .bind(&payload.user_id)
-    .bind(&payload.user_tag)
-    .bind(&payload.blocked_by)
-    .bind(&payload.blocked_by_tag)
-    .bind(&payload.reason)
-    .bind(guild_id)
-    .fetch_one(&pool)
-    .await?;
+    let mut conn = pool.get()?;
+    let new_blocked_user = NewBlockedUser {
+        user_id: &payload.user_id,
+        user_tag: &payload.user_tag,
+        blocked_by: &payload.blocked_by,
+        blocked_by_tag: &payload.blocked_by_tag,
+        reason: payload.reason,
+        created_at: Utc::now(),
+        guild_id: &guild_id_path,
+    };
 
-    Ok((StatusCode::CREATED, Json(new_blocked_user)))
+    let result = diesel::insert_into(blocked_users)
+        .values(&new_blocked_user)
+        .returning(BlockedUser::as_returning())
+        .get_result(&mut conn)?;
+
+    Ok((StatusCode::CREATED, Json(result)))
 }
 
 async fn unblock_user(
-    State(pool): State<PgPool>,
-    Path((guild_id, user_id)): Path<(String, String)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, user_id_path)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let result = sqlx::query("DELETE FROM blocked_users WHERE user_id = $1 AND guild_id = $2")
-        .bind(user_id)
-        .bind(guild_id)
-        .execute(&pool)
-        .await?;
+    let mut conn = pool.get()?;
+    let num_deleted = diesel::delete(
+        blocked_users.filter(user_id.eq(user_id_path).and(guild_id.eq(guild_id_path))),
+    )
+    .execute(&mut conn)?;
 
-    if result.rows_affected() > 0 {
+    if num_deleted > 0 {
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(AppError::Anyhow(anyhow::anyhow!("User not found")))
@@ -75,18 +82,17 @@ async fn unblock_user(
 }
 
 async fn is_user_blocked(
-    State(pool): State<PgPool>,
-    Path((guild_id, user_id)): Path<(String, String)>,
+    State(pool): State<DbPool>,
+    Path((guild_id_path, user_id_path)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, AppError> {
-    let blocked_user = sqlx::query_as::<_, db::BlockedUser>(
-        "SELECT * FROM blocked_users WHERE user_id = $1 AND guild_id = $2",
-    )
-    .bind(user_id)
-    .bind(guild_id)
-    .fetch_optional(&pool)
-    .await?;
+    let mut conn = pool.get()?;
+    let result = blocked_users
+        .filter(user_id.eq(user_id_path).and(guild_id.eq(guild_id_path)))
+        .select(BlockedUser::as_select())
+        .first(&mut conn)
+        .optional()?;
 
-    if let Some(user) = blocked_user {
+    if let Some(user) = result {
         Ok((
             StatusCode::OK,
             Json(serde_json::json!({ "blocked": true, "user": user })),
