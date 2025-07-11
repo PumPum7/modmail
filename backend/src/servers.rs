@@ -1,4 +1,6 @@
-use crate::structs::{CreateServer, Server, UpdateServer, ValidateGuildRequest, ValidatedGuild};
+use crate::structs::{
+    CreateServer, GuildConfig, Server, UpdateServer, ValidateGuildRequest, ValidatedGuild,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -125,21 +127,19 @@ async fn validate_user_guilds(
     }
 
     // Query all servers in one go
-    let rows = sqlx::query!(
-        "SELECT guild_id FROM servers WHERE guild_id = ANY($1)",
-        &user_guild_ids
-    )
-    .fetch_all(&db_pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let rows = sqlx::query_as::<_, Server>("SELECT guild_id FROM servers WHERE guild_id = ANY($1)")
+        .bind(&user_guild_ids)
+        .fetch_all(&db_pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let bot_guild_ids: std::collections::HashSet<String> =
-        rows.into_iter().map(|r| r.guild_id).collect();
+        rows.iter().map(|r| r.guild_id.clone()).collect();
 
     // Query configs for those guilds
-    let config_rows = sqlx::query!(
+    let config_rows = sqlx::query_as::<_, GuildConfig>(
         "SELECT guild_id FROM guild_configs WHERE guild_id = ANY($1)",
-        &user_guild_ids
     )
+    .bind(&user_guild_ids)
     .fetch_all(&db_pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
