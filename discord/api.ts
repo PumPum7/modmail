@@ -218,16 +218,57 @@ export async function updateThreadUrgency(
 	return response.json() as Promise<Thread>;
 }
 
-// Add function to get user's available servers
-export async function getUserServers(userId: string): Promise<any[]> {
-	const response = await fetch(`${BACKEND_URL}/users/${userId}/servers`);
-	if (!response.ok) {
+// Get servers shared between user and bot (from bot's perspective)
+export async function getUserServers(userId: string, client: any): Promise<any[]> {
+	const sharedServers = [];
+
+	// Get all guilds the bot is in
+	for (const [guildId, guild] of client.guilds.cache) {
+		try {
+			// Check if the user is a member of this guild
+			const member = await guild.members.fetch(userId).catch(() => null);
+
+			if (member) {
+				// User is in this guild, add to shared servers
+				sharedServers.push({
+					guild_id: guildId,
+					guild_name: guild.name,
+					guild_icon: guild.icon,
+					member_count: guild.memberCount,
+					user_has_permissions: true, // We know they're a member
+				});
+			}
+		} catch (error) {
+			// If we can't fetch the member, skip this guild
+			console.log(`Could not check membership for user ${userId} in guild ${guild.name}`);
+			continue;
+		}
+	}
+
+	// Validate with backend to ensure only configured servers are returned
+	if (sharedServers.length === 0) {
 		return [];
 	}
-	return response.json() as Promise<any[]>;
+
+	try {
+		const response = await fetch(`${BACKEND_URL}/validate-guilds`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(sharedServers),
+		});
+
+		if (response.ok) {
+			const validatedServers = (await response.json()) as any[];
+			return validatedServers.filter((server: any) => server.has_bot && server.has_config);
+		}
+	} catch (error) {
+		console.error('Failed to validate servers with backend:', error);
+	}
+
+	// Fallback: return all shared servers if backend validation fails
+	return sharedServers;
 }
 
-// Server management functions
 export async function createServer(guildId: string, guildName: string): Promise<any> {
 	const response = await fetch(`${BACKEND_URL}/servers`, {
 		method: 'POST',

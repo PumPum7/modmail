@@ -118,38 +118,47 @@ async fn validate_user_guilds(
     State(db_pool): State<PgPool>,
     Json(payload): Json<Vec<ValidateGuildRequest>>,
 ) -> Result<Json<Vec<ValidatedGuild>>, StatusCode> {
-    let mut validated_guilds = Vec::new();
-
-    for guild_request in payload {
-        // Check if guild exists in our servers table (bot is configured there)
-        let server_exists = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM servers WHERE guild_id = $1)",
-        )
-        .bind(&guild_request.guild_id)
-        .fetch_one(&db_pool)
-        .await
-        .unwrap_or(false);
-
-        if server_exists {
-            let config_exists = sqlx::query_scalar::<_, bool>(
-                "SELECT EXISTS(SELECT 1 FROM guild_configs WHERE guild_id = $1)",
-            )
-            .bind(&guild_request.guild_id)
-            .fetch_one(&db_pool)
-            .await
-            .unwrap_or(false);
-
-            // For now, if server exists in our DB, consider it valid
-            validated_guilds.push(ValidatedGuild {
-                guild_id: guild_request.guild_id,
-                guild_name: guild_request.guild_name,
-                guild_icon: guild_request.guild_icon,
-                has_bot: server_exists,
-                has_config: config_exists,
-                user_has_permissions: guild_request.user_has_permissions,
-            });
-        }
+    // Collect all guild_ids from the user
+    let user_guild_ids: Vec<String> = payload.iter().map(|g| g.guild_id.clone()).collect();
+    if user_guild_ids.is_empty() {
+        return Ok(Json(vec![]));
     }
+
+    // Query all servers in one go
+    let rows = sqlx::query!(
+        "SELECT guild_id FROM servers WHERE guild_id = ANY($1)",
+        &user_guild_ids
+    )
+    .fetch_all(&db_pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let bot_guild_ids: std::collections::HashSet<String> =
+        rows.into_iter().map(|r| r.guild_id).collect();
+
+    // Query configs for those guilds
+    let config_rows = sqlx::query!(
+        "SELECT guild_id FROM guild_configs WHERE guild_id = ANY($1)",
+        &user_guild_ids
+    )
+    .fetch_all(&db_pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let config_guild_ids: std::collections::HashSet<String> =
+        config_rows.into_iter().map(|r| r.guild_id).collect();
+
+    // Build validated list
+    let validated_guilds: Vec<ValidatedGuild> = payload
+        .into_iter()
+        .filter(|g| bot_guild_ids.contains(&g.guild_id))
+        .map(|g| ValidatedGuild {
+            guild_id: g.guild_id.clone(),
+            guild_name: g.guild_name,
+            guild_icon: g.guild_icon,
+            has_bot: true,
+            has_config: config_guild_ids.contains(&g.guild_id),
+            user_has_permissions: g.user_has_permissions,
+        })
+        .collect();
 
     Ok(Json(validated_guilds))
 }

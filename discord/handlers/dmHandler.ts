@@ -37,7 +37,7 @@ export async function handleDirectMessage(message: Message, client: Client) {
 
 	try {
 		// Get user's available servers
-		const userServers = await getUserServers(userId);
+		const userServers = await getUserServers(userId, client);
 
 		if (userServers.length === 0) {
 			await message.author.send(
