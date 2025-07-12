@@ -13,10 +13,15 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) =>
 		throw redirect(302, '/select-server');
 	}
 
-	// If user is not authenticated and trying to access protected routes, redirect to login
-	if (!user && url.pathname !== '/login' && url.pathname !== '/select-server') {
-		throw redirect(302, '/login');
-	}
+        // If user is not authenticated and trying to access protected routes, redirect to login
+        if (
+                !user &&
+                url.pathname !== '/login' &&
+                url.pathname !== '/select-server' &&
+                url.pathname !== '/'
+        ) {
+                throw redirect(302, '/login');
+        }
 
 	let currentGuild = null;
 	let availableGuilds = [];

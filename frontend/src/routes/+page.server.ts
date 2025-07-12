@@ -3,16 +3,18 @@ import { api } from '$lib/api';
 import { fail, redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, cookies, url }) => {
-	const user = locals.user;
-	const selectedGuildId = cookies.get('selected_guild_id');
+        const user = locals.user;
+        const selectedGuildId = cookies.get('selected_guild_id');
 
-	if (!user) {
-		throw redirect(302, '/login');
-	}
+        // If the user isn't logged in simply return empty data so the
+        // page can render the marketing homepage.
+        if (!user) {
+                return { threads: [], pagination: null, user: null };
+        }
 
-	if (!selectedGuildId) {
-		throw redirect(302, '/select-server');
-	}
+        if (!selectedGuildId) {
+                throw redirect(302, '/select-server');
+        }
 
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');

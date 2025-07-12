@@ -1,7 +1,17 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { goto } from '$app/navigation';
-	import { Clock, MessageCircle, User, XCircle, ChevronLeft, ChevronRight } from 'lucide-svelte';
+import {
+        Clock,
+        MessageCircle,
+        User,
+        XCircle,
+        ChevronLeft,
+        ChevronRight,
+        Server,
+        BarChart2,
+        Settings
+} from 'lucide-svelte';
 	import type { Thread } from '$lib/api';
 	import type { PageProps } from './$types';
 	import { api } from '$lib/api';
@@ -19,20 +29,15 @@
 		}
 	});
 
-	// Handle authentication on mount (client-side only)
-	$effect(() => {
-		if (typeof window !== 'undefined') {
-			if (!data.user) {
-				goto('/login');
-				return;
-			}
-
-			if (!data.user?.isModerator) {
-				goto('/login?error=not_moderator');
-				return;
-			}
-		}
-	});
+        // Handle authentication on mount when logged in
+        $effect(() => {
+                if (typeof window !== 'undefined' && data.user) {
+                        if (!data.user?.isModerator) {
+                                goto('/login?error=not_moderator');
+                                return;
+                        }
+                }
+        });
 
 	async function refreshThreads() {
 		try {
@@ -51,135 +56,177 @@
 		return `${userId.slice(0, 4)}...${userId.slice(-4)}`;
 	}
 
-	function goToPage(pageNum: number) {
-		const url = new URL(window.location.href);
-		url.searchParams.set('page', pageNum.toString());
-		goto(url.pathname + url.search);
-	}
+        function goToPage(pageNum: number) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('page', pageNum.toString());
+                goto(url.pathname + url.search);
+        }
+
+        function handleLogin() {
+                window.location.href = '/api/auth/discord';
+        }
 </script>
 
 <svelte:head>
-	<title>Threads - Modmail Dashboard</title>
+        <title>{data.user ? 'Threads - Modmail Dashboard' : 'Modmail Dashboard'}</title>
 </svelte:head>
 
-<div class="page">
-	<div class="page-header">
-		<h1>Modmail Threads</h1>
-		<button onclick={refreshThreads} class="refresh-btn" disabled={loading}>
-			{loading ? 'Loading...' : 'Refresh'}
-		</button>
-	</div>
+{#if data.user}
+        <div class="page">
+                <div class="page-header">
+                        <h1>Modmail Threads</h1>
+                        <button onclick={refreshThreads} class="refresh-btn" disabled={loading}>
+                                {loading ? 'Loading...' : 'Refresh'}
+                        </button>
+                </div>
 
-	{#if error}
-		<div class="error">{error}</div>
-	{:else if loading && data.threads.length === 0}
-		<div class="loading">Loading threads...</div>
-	{:else if data.threads.length === 0}
-		<div class="empty-state">
-			<MessageCircle size={48} color="#ccc" />
-			<h3>No threads found</h3>
-			<p>When users send DMs to the bot, threads will appear here.</p>
-		</div>
-	{:else}
-		<div class="threads-grid">
-			{#each data.threads as thread (thread.id)}
-				<div class="thread-card" class:closed={!thread.is_open}>
-					<div class="thread-header">
-						<div class="thread-info">
-							<User size={16} />
-							<span class="user-id">{formatUserId(thread.user_id)}</span>
-						</div>
-						<div class="thread-status" class:open={thread.is_open} class:closed={!thread.is_open}>
-							{thread.is_open ? 'Open' : 'Closed'}
-						</div>
-					</div>
+                {#if error}
+                        <div class="error">{error}</div>
+                {:else if loading && data.threads.length === 0}
+                        <div class="loading">Loading threads...</div>
+                {:else if data.threads.length === 0}
+                        <div class="empty-state">
+                                <MessageCircle size={48} color="#ccc" />
+                                <h3>No threads found</h3>
+                                <p>When users send DMs to the bot, threads will appear here.</p>
+                        </div>
+                {:else}
+                        <div class="threads-grid">
+                                {#each data.threads as thread (thread.id)}
+                                        <div class="thread-card" class:closed={!thread.is_open}>
+                                                <div class="thread-header">
+                                                        <div class="thread-info">
+                                                                <User size={16} />
+                                                                <span class="user-id">{formatUserId(thread.user_id)}</span>
+                                                        </div>
+                                                        <div class="thread-status" class:open={thread.is_open} class:closed={!thread.is_open}>
+                                                                {thread.is_open ? 'Open' : 'Closed'}
+                                                        </div>
+                                                </div>
 
-					<div class="thread-details">
-						<div class="detail-item">
-							<Clock size={14} />
-							<span>Thread ID: {thread.id}</span>
-						</div>
-						<div class="detail-item">
-							<MessageCircle size={14} />
-							<span>Channel: {thread.thread_id.slice(0, 8)}...</span>
-						</div>
-					</div>
+                                                <div class="thread-details">
+                                                        <div class="detail-item">
+                                                                <Clock size={14} />
+                                                                <span>Thread ID: {thread.id}</span>
+                                                        </div>
+                                                        <div class="detail-item">
+                                                                <MessageCircle size={14} />
+                                                                <span>Channel: {thread.thread_id.slice(0, 8)}...</span>
+                                                        </div>
+                                                </div>
 
-					<div class="thread-actions">
-						<button onclick={() => goto(`/thread/${thread.id}`)} class="view-btn">
-							View Messages
-						</button>
-						{#if thread.is_open}
-							<form
-								method="POST"
-								action="?/closeThread"
-								use:enhance={() => {
-									loading = true;
-									return async ({ result }) => {
-										loading = false;
-										if (result.type === 'success') {
-											await invalidateAll();
-										}
-									};
-								}}
-							>
-								<input type="hidden" name="id" value={thread.id} />
-								<button type="submit" class="close-btn" disabled={loading}>
-									<XCircle size={16} />
-									Close
-								</button>
-							</form>
-						{/if}
-					</div>
-				</div>
-			{/each}
-		</div>
+                                                <div class="thread-actions">
+                                                        <button onclick={() => goto(`/thread/${thread.id}`)} class="view-btn">
+                                                                View Messages
+                                                        </button>
+                                                        {#if thread.is_open}
+                                                                <form
+                                                                        method="POST"
+                                                                        action="?/closeThread"
+                                                                        use:enhance={() => {
+                                                                                loading = true;
+                                                                                return async ({ result }) => {
+                                                                                        loading = false;
+                                                                                        if (result.type === 'success') {
+                                                                                                await invalidateAll();
+                                                                                        }
+                                                                                };
+                                                                        }}
+                                                                >
+                                                                        <input type="hidden" name="id" value={thread.id} />
+                                                                        <button type="submit" class="close-btn" disabled={loading}>
+                                                                                <XCircle size={16} />
+                                                                                Close
+                                                                        </button>
+                                                                </form>
+                                                        {/if}
+                                                </div>
+                                        </div>
+                                {/each}
+                        </div>
 
-		{#if data.pagination && data.pagination.total_pages > 1}
-			<div class="pagination">
-				<div class="pagination-info">
-					Showing {(data.pagination.page - 1) * data.pagination.limit + 1} to {Math.min(
-						data.pagination.page * data.pagination.limit,
-						data.pagination.total_count
-					)} of {data.pagination.total_count} threads
-				</div>
-				<div class="pagination-controls">
-					<button
-						onclick={() => goToPage(data.pagination.page - 1)}
-						class="pagination-btn"
-						disabled={!data.pagination.has_prev}
-					>
-						<ChevronLeft size={16} />
-						Previous
-					</button>
+                        {#if data.pagination && data.pagination.total_pages > 1}
+                                <div class="pagination">
+                                        <div class="pagination-info">
+                                                Showing {(data.pagination.page - 1) * data.pagination.limit + 1} to {Math.min(
+                                                        data.pagination.page * data.pagination.limit,
+                                                        data.pagination.total_count
+                                                )} of {data.pagination.total_count} threads
+                                        </div>
+                                        <div class="pagination-controls">
+                                                <button
+                                                        onclick={() => goToPage(data.pagination.page - 1)}
+                                                        class="pagination-btn"
+                                                        disabled={!data.pagination.has_prev}
+                                                >
+                                                        <ChevronLeft size={16} />
+                                                        Previous
+                                                </button>
 
-					{#each Array.from({ length: Math.min(5, data.pagination.total_pages) }, (_, i) => {
-						const start = Math.max(1, data.pagination.page - 2);
-						const end = Math.min(data.pagination.total_pages, start + 4);
-						return start + i;
-					}).filter((p) => p <= data.pagination.total_pages) as pageNum}
-						<button
-							onclick={() => goToPage(pageNum)}
-							class="pagination-btn page-btn"
-							class:active={pageNum === data.pagination.page}
-						>
-							{pageNum}
-						</button>
-					{/each}
+                                                {#each Array.from({ length: Math.min(5, data.pagination.total_pages) }, (_, i) => {
+                                                        const start = Math.max(1, data.pagination.page - 2);
+                                                        const end = Math.min(data.pagination.total_pages, start + 4);
+                                                        return start + i;
+                                                }).filter((p) => p <= data.pagination.total_pages) as pageNum}
+                                                        <button
+                                                                onclick={() => goToPage(pageNum)}
+                                                                class="pagination-btn page-btn"
+                                                                class:active={pageNum === data.pagination.page}
+                                                        >
+                                                                {pageNum}
+                                                        </button>
+                                                {/each}
 
-					<button
-						onclick={() => goToPage(data.pagination.page + 1)}
-						class="pagination-btn"
-						disabled={!data.pagination.has_next}
-					>
-						Next
-						<ChevronRight size={16} />
-					</button>
-				</div>
-			</div>
-		{/if}
-	{/if}
-</div>
+                                                <button
+                                                        onclick={() => goToPage(data.pagination.page + 1)}
+                                                        class="pagination-btn"
+                                                        disabled={!data.pagination.has_next}
+                                                >
+                                                        Next
+                                                        <ChevronRight size={16} />
+                                                </button>
+                                        </div>
+                                </div>
+                        {/if}
+                {/if}
+        </div>
+{:else}
+        <div class="marketing">
+                <section class="hero">
+                        <h1>Manage your server communication with ease</h1>
+                        <p>The Modmail Dashboard helps your team stay organized and respond quickly.</p>
+                        <button class="cta-btn" onclick={handleLogin}>Login with Discord</button>
+                </section>
+
+                <section class="features-grid">
+                        <div class="feature">
+                                <MessageCircle size={40} />
+                                <h3>Threaded Conversations</h3>
+                                <p>Keep track of all user DMs in a single, searchable place.</p>
+                        </div>
+                        <div class="feature">
+                                <Server size={40} />
+                                <h3>Multi Server</h3>
+                                <p>Manage modmail across all your Discord servers effortlessly.</p>
+                        </div>
+                        <div class="feature">
+                                <BarChart2 size={40} />
+                                <h3>Analytics</h3>
+                                <p>Gain insights into response times and user interactions.</p>
+                        </div>
+                        <div class="feature">
+                                <Settings size={40} />
+                                <h3>Custom Macros</h3>
+                                <p>Save time with reusable responses to common questions.</p>
+                        </div>
+                </section>
+
+                <section class="cta">
+                        <h2>Ready to get started?</h2>
+                        <button class="cta-btn" onclick={handleLogin}>Sign in with Discord</button>
+                </section>
+        </div>
+{/if}
 
 <style lang="stylus">
 	@import '../styles/_variables.styl'
