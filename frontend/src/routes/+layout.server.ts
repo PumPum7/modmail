@@ -14,7 +14,12 @@ export const load: LayoutServerLoad = async ({ locals, cookies, url, fetch }) =>
 	}
 
 	// If user is not authenticated and trying to access protected routes, redirect to login
-	if (!user && url.pathname !== '/login' && url.pathname !== '/select-server') {
+	if (
+		!user &&
+		url.pathname !== '/login' &&
+		url.pathname !== '/select-server' &&
+		url.pathname !== '/'
+	) {
 		throw redirect(302, '/login');
 	}
 

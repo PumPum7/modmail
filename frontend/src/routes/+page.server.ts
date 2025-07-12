@@ -6,8 +6,10 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
 	const user = locals.user;
 	const selectedGuildId = cookies.get('selected_guild_id');
 
+	// If the user isn't logged in simply return empty data so the
+	// page can render the marketing homepage.
 	if (!user) {
-		throw redirect(302, '/login');
+		return { threads: [], pagination: null, user: null };
 	}
 
 	if (!selectedGuildId) {
